@@ -5,7 +5,6 @@ import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.view.LayoutInflater
@@ -38,6 +37,7 @@ import com.google.firebase.auth.*
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
+import java.io.ByteArrayInputStream
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -48,7 +48,7 @@ class FragmentVerifyPhone : Fragment(), ClickHelper, View.OnClickListener {
     private var countryCode = ""
     private var name = ""
     private var gender = ""
-    private var imageUri = Uri.EMPTY
+    private var imageStream: Pair<ByteArrayInputStream, ByteArray>? = null
     private var storedVerificationId = ""
     private lateinit var pref: SharedPreferences
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
@@ -67,8 +67,8 @@ class FragmentVerifyPhone : Fragment(), ClickHelper, View.OnClickListener {
         signUpViewModel.three.observe(viewLifecycleOwner) {
             name = it.name
             gender = it.gender
-            imageUri = Uri.parse(it.uri)
-            Glide.with(this).load(it.uri).error(R.drawable.ic_avatar).centerCrop().into(binding.verifyUserImage)
+            imageStream = it.stream
+            Glide.with(this).load(imageStream!!.second).error(R.drawable.ic_avatar).centerCrop().into(binding.verifyUserImage)
         }
         binding.phoneCode.setOnClickListener(this)
         binding.sendCode.setOnClickListener(this)
@@ -225,7 +225,7 @@ class FragmentVerifyPhone : Fragment(), ClickHelper, View.OnClickListener {
 
         val imageRef =
             FirebaseStorage.getInstance().reference.child(EditProfileActivity.PROFILE_IMAGE).child(FirebaseAuth.getInstance().currentUser!!.uid).child(timeSent)
-        val uploadTask = imageRef.putFile(imageUri)
+        val uploadTask = imageRef.putStream(imageStream!!.first)
         uploadTask.continueWith { task ->
             if (!task.isSuccessful) task.exception?.let { itId ->
                 requireActivity().supportFragmentManager.beginTransaction().remove(fragmentDialog).commit()

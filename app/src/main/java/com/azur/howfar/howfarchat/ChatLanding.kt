@@ -12,11 +12,14 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
@@ -30,10 +33,11 @@ import androidx.viewpager2.widget.ViewPager2
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.azur.howfar.MyFirebaseMessagingService
 import com.azur.howfar.R
 import com.azur.howfar.activity.BaseActivity
 import com.azur.howfar.activity.LoginActivityActivity
-import com.azur.howfar.activity.SplashActivityLike
+import com.azur.howfar.activity.SpleshActivityLike
 import com.azur.howfar.databinding.ActivityChatLandingBinding
 import com.azur.howfar.howfarchat.chat.ActivitySearchChat
 import com.azur.howfar.howfarchat.groupChat.ActivityNewGroup
@@ -43,11 +47,11 @@ import com.azur.howfar.howfarchat.settings.SettingsFragment
 import com.azur.howfar.howfarchat.status.ActivityCreateStatus
 import com.azur.howfar.howfarchat.status.FragmentStatus
 import com.azur.howfar.howfarchat.status.StatusType
-import com.azur.howfar.howfarwallet.ActivityFingerPrint
+import com.azur.howfar.howfarwallet.ActivityWallet
 import com.azur.howfar.livedata.ValueEventLiveData
 import com.azur.howfar.models.BannerData
 import com.azur.howfar.models.EventListenerType.onDataChange
-import com.azur.howfar.models.FingerprintRoute.HOW_FAR_PAY
+import com.azur.howfar.models.PushNotification
 import com.azur.howfar.models.UserProfile
 import com.azur.howfar.services.MsgBroadcast
 import com.azur.howfar.user.EditProfileActivity
@@ -63,6 +67,8 @@ import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,14 +88,48 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
     private var callSoundPool: SoundPool? = null
     private var callSound = 1
     private val booleanViewModel by viewModels<BooleanViewModel>()
-    private val userProfileViewModel by viewModels<UserProfileViewmodel>()
+    private val userProfileViewmodel by viewModels<UserProfileViewmodel>()
     private var timeRef = FirebaseDatabase.getInstance().reference
     private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
     private lateinit var pref: SharedPreferences
     private var contactJson = ""
     private lateinit var callUtils: CallUtils
     private var permissionDialog: AlertDialog? = null
+    private var giftDialog: AlertDialog? = null
     private val workManager = WorkManager.getInstance(this)
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // FCM SDK (and your app) can post notifications.
+            subscribeToTopics()
+        } else {
+            // TODO: Inform user that that your app will not show notifications.
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_DENIED) {
+                callUtils.permissionRationale(message = "HowFar needs PUSH NOTIFICATION permission to deliver best notification experience\nGrant app permission")
+            }
+        }
+    }
+
+    private fun subscribeToTopics(topic : String = "HowFar") {
+        val uid = FirebaseAuth.getInstance().currentUser!!.uid
+        val messageTopic = uid // + "-Messages"
+//        val broadcastTopic = uid + "-Broadcast"
+        MyFirebaseMessagingService.subscribeToTopic(messageTopic, baseContext)
+//        MyFirebaseMessagingService.subscribeToTopic(broadcastTopic, baseContext)
+        // pushGeneralNotification(arrayListOf<String>(topic, uid), uid)
+    }
+
+    private fun pushGeneralNotification(receiverIds: ArrayList<String>, sednderId: String) {
+        val notif = PushNotification(
+            title = "Test Notifications",
+            body = "Test Notifications",
+            senderId = sednderId,
+            receiverIds = receiverIds,
+        )
+        FirebaseDatabase.getInstance().reference.child("PushNotifications").push().setValue(notif);
+    }
 
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         when {
@@ -119,6 +159,39 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
         alarmManager.setInexactRepeating(AlarmManager.RTC_WAKEUP, 0, fiveMin, pendingIntent)
     }
 
+    private fun askNotificationPermission() {
+        Log.d("Notification Permission", "Requesting Notification permission");
+        // This is only necessary for API level >= 33 (TIRAMISU)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                // FCM SDK (and your app) can post notifications.
+                Log.d("Notification Permission", "Notification permission granted");
+                subscribeToTopics()
+            } else if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                val message = "HowFar needs PUSH NOTIFICATION permission to deliver the best notification experience\nGrant app permission"
+                val permissionBuilder = AlertDialog.Builder(this)
+                permissionBuilder.setTitle("App permission")
+                permissionBuilder.setMessage(message)
+                permissionBuilder.setPositiveButton("Okay") { dialog, _ ->
+                    callUtils.openAppSettings()
+                    dialog.cancel()
+                }.setNegativeButton("No") { dialog, _ ->
+                    dialog.cancel()
+                }.setNegativeButton("Cancel") { dialog, _ ->
+                    dialog.cancel()
+                }
+                if (giftDialog != null) giftDialog!!.dismiss()
+                permissionDialog = permissionBuilder.create()
+                permissionDialog!!.show()
+            } else {
+                // Directly ask for the permission
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     private fun askPermission() {
         when {
             ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED -> {
@@ -143,6 +216,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 }.setNegativeButton("Cancel") { dialog, _ ->
                     dialog.cancel()
                 }
+                if (giftDialog != null) giftDialog!!.dismiss()
                 permissionDialog = permissionBuilder.create()
                 permissionDialog!!.show()
             }
@@ -155,11 +229,13 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
         title = ""
         pref = getSharedPreferences(getString(R.string.ALL_PREFERENCE), Context.MODE_PRIVATE)
         val theme = pref.getInt(getString(R.string.THEME_SHARED_PREFERENCE), R.style.Theme_HowFar)
-        setTheme(theme)
         timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
+        setTheme(theme)
         setContentView(binding.root)
         setSupportActionBar(binding.chattingLandingToolbar)
         callUtils = CallUtils(this, this)
+        askNotificationPermission()
+        subscribeToTopics()
         activeUserAnalytics()
         bannerDisplay()
         binding.navDayNight.setOnClickListener(this)
@@ -214,7 +290,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
             when (it.second) {
                 onDataChange -> {
                     val user = it.first.getValue(UserProfile::class.java)!!
-                    userProfileViewModel.setUserProfile(user)
+                    userProfileViewmodel.setUserProfile(user)
                     binding.navUsername.text = user.name
                     if (!isDestroyed) Glide.with(this).load(user.image).error(R.drawable.ic_avatar).centerCrop().into(binding.navPics)
                 }
@@ -228,8 +304,8 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
             override fun onPageSelected(position: Int) = Unit
             override fun onPageScrollStateChanged(state: Int) = Unit
         })
-        CoroutineScope(Dispatchers.IO).launch {
-            delay(1000)
+        scope.launch {
+            delay(5000)
             runOnUiThread {
                 booleanViewModel.setStopLoadingShimmer(true)
             }
@@ -239,6 +315,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
             binding.coinRoot.visibility = View.GONE
             if (isChecked) binding.cashRoot.visibility = View.VISIBLE else binding.coinRoot.visibility = View.VISIBLE
         }
+
         binding.chattingLandingViewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
                 super.onPageScrolled(position, positionOffset, positionOffsetPixels)
@@ -305,6 +382,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
     }
 
     override fun onPause() {
+        if (giftDialog != null) giftDialog!!.dismiss()
         if (permissionDialog != null) permissionDialog!!.dismiss()
         super.onPause()
     }
@@ -323,11 +401,13 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
 
     override fun onResume() {
         super.onResume()
-        //binding.cashRoot.visibility = View.VISIBLE
-        //binding.coinRoot.visibility = View.GONE
-        //binding.coinCashSwitch.isChecked = false
+        //showCustomToast(viewRoot = binding.root)
+        binding.cashRoot.visibility = View.VISIBLE
+        binding.coinRoot.visibility = View.GONE
+        binding.coinCashSwitch.isChecked = false
 
         pref.edit().putInt(getString(R.string.in_chat_phone_key), 0).apply()
+        //window.statusBarColor = Color.parseColor("#1101A9")
         FirebaseAuth.getInstance().addAuthStateListener { p0 ->
             if (p0.currentUser == null) {
                 val intent = Intent(this@ChatLanding, LoginActivityActivity::class.java)
@@ -383,7 +463,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 }
             }
             R.id.nav_like -> {
-                startActivity(Intent(this, SplashActivityLike::class.java))
+                startActivity(Intent(this, SpleshActivityLike::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
                 drawer()
             }
@@ -392,7 +472,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 drawer()
             }
             R.id.nav_pay -> {
-                startActivity(Intent(this, ActivityFingerPrint::class.java).putExtra("data", HOW_FAR_PAY))
+                startActivity(Intent(this, ActivityWallet::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
                 drawer()
             }
@@ -443,14 +523,15 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 }
                 AppCompatDelegate.setDefaultNightMode(if (!isNight) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
             }
+
             R.id.chat_chat -> {
             }
             R.id.chat_like -> {
-                startActivity(Intent(this, SplashActivityLike::class.java))
+                startActivity(Intent(this, SpleshActivityLike::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
             }
             R.id.chat_pay -> {
-                startActivity(Intent(this, ActivityFingerPrint::class.java).putExtra("data", HOW_FAR_PAY))
+                startActivity(Intent(this, ActivityWallet::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
             }
             R.id.chat_setting -> {

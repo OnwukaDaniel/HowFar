@@ -30,6 +30,6 @@
     <string name="THEME_SHARED_PREFERENCE">THEME_SHARED_PREFERENCE</string>
     <string name="moment_data">moment_data</string>
     <string name="support_data">support_data</string>
-    <string name="wallet_secret_key">wallet_secret_key</string>
+    <string name="default_notification_channel_id">Messages</string>
 
 </resources>

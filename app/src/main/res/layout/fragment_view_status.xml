@@ -51,7 +51,7 @@
         app:segmentSelectedStrokeColor="@android:color/black"
         app:segmentStrokeColor="@android:color/black"
         app:segmentStrokeWidth="1dp"
-        app:timePerSegment="30000" />
+        app:timePerSegment="5000" />
 
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/view_user_image"

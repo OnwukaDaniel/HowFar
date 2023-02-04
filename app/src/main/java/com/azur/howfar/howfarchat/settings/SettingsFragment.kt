@@ -15,10 +15,7 @@ import androidx.fragment.app.activityViewModels
 import com.azur.howfar.R
 import com.azur.howfar.activity.LoginActivityActivity
 import com.azur.howfar.databinding.FragmentSettingsBinding
-import com.azur.howfar.howfarwallet.ActivityFingerPrint
 import com.azur.howfar.howfarwallet.ActivityWallet
-import com.azur.howfar.models.FingerprintRoute
-import com.azur.howfar.models.FingerprintRoute.HOW_FAR_PAY
 import com.azur.howfar.user.EditProfileActivity
 import com.azur.howfar.user.ProfileFragment
 import com.azur.howfar.viewmodel.UserProfileViewmodel
@@ -30,7 +27,7 @@ import com.google.firebase.ktx.Firebase
 class SettingsFragment : Fragment(), View.OnClickListener {
     private lateinit var binding: FragmentSettingsBinding
     private lateinit var pref: SharedPreferences
-    private val userProfileViewModel by activityViewModels<UserProfileViewmodel>()
+    private val userProfileViewmodel by activityViewModels<UserProfileViewmodel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -45,7 +42,7 @@ class SettingsFragment : Fragment(), View.OnClickListener {
         binding.settingsNotificationToggleCard.setOnClickListener(this)
         binding.settingsThemeToggleCard.setOnClickListener(this)
 
-        userProfileViewModel.userProfile.observe(viewLifecycleOwner) {
+        userProfileViewmodel.userProfile.observe(viewLifecycleOwner) {
             binding.settingsUserName.text = it.name
             binding.settingsUserBio.text = it.bio
             if (isAdded && activity != null)
@@ -98,7 +95,7 @@ class SettingsFragment : Fragment(), View.OnClickListener {
                     .replace(R.id.chat_landing_root, ApplyThemeFragment()).commit()
             }
             R.id.settings_payment -> {
-                startActivity(Intent(requireContext(), ActivityFingerPrint::class.java).putExtra("data", HOW_FAR_PAY))
+                startActivity(Intent(requireContext(), ActivityWallet::class.java))
                 requireActivity().overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
             }
             R.id.settings_log_out -> {

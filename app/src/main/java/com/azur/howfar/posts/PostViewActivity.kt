@@ -224,7 +224,7 @@ class PostViewActivity : AppCompatActivity(), View.OnClickListener {
                                 FirebaseDatabase.getInstance().reference.child(USER_DETAILS).child(user.uid).get().addOnSuccessListener { p ->
                                     if (p.exists()) {
                                         val myProfile = p.getValue(UserProfile::class.java)!!
-                                        HFCoinUtils.sendLoveLikeHFCoin(
+                                        HFCoinUtils.sendHFCoin(
                                             Const.LIKE_VALUE,
                                             othersRef,
                                             moment.creatorUid,
@@ -267,7 +267,7 @@ class PostViewActivity : AppCompatActivity(), View.OnClickListener {
                                 FirebaseDatabase.getInstance().reference.child(USER_DETAILS).child(user.uid).get().addOnSuccessListener { p ->
                                     if (p.exists()) {
                                         val myProfile = p.getValue(UserProfile::class.java)!!
-                                        HFCoinUtils.sendLoveLikeHFCoin(
+                                        HFCoinUtils.sendHFCoin(
                                             Const.LOVE_VALUE,
                                             othersRef,
                                             moment.creatorUid,

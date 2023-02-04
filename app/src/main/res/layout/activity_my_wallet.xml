@@ -9,42 +9,23 @@
     tools:context=".user.wallet.MyWalletActivity">
 
     <LinearLayout
+        android:id="@+id/lytTop"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:paddingTop="10dp"
         android:paddingBottom="10dp">
 
-        <LinearLayout
-            android:id="@+id/lytTop"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp">
-
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_gravity="center"
-                android:layout_marginStart="5dp"
-                android:onClick="onClickBack"
-                android:padding="5dp"
-                android:src="@drawable/ic_back"
-                app:tint="@color/white"  />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textColor="@color/white"
-                android:textSize="25sp"
-                android:layout_gravity="center_vertical"
-                android:layout_marginStart="5dp"
-                android:text="Wallet" />
-
-        </LinearLayout>
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="center"
+            android:layout_marginStart="5dp"
+            android:onClick="onClickBack"
+            android:padding="5dp"
+            android:src="@drawable/ic_back"
+            app:tint="@color/white" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tablayout1"
@@ -53,7 +34,6 @@
             android:layout_marginHorizontal="10dp"
             android:visibility="visible"
             app:tabGravity="center"
-            android:background="#00000000"
             app:tabIndicator="@null"
             app:tabMode="scrollable"
             app:tabRippleColor="@null"
@@ -61,12 +41,11 @@
             app:tabTextAppearance="@style/mytab"
             app:tabTextColor="@color/white" />
 
-        <androidx.viewpager2.widget.ViewPager2
-            android:id="@+id/viewPager"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@id/lytTop" />
-
     </LinearLayout>
 
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/lytTop" />
 </RelativeLayout>

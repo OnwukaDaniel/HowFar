@@ -22,6 +22,7 @@ import android.view.*
 import android.view.inputmethod.InputMethodManager
 import android.webkit.MimeTypeMap
 import android.widget.*
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
@@ -69,10 +70,10 @@ import com.azur.howfar.viewmodel.*
 import com.azur.howfar.workManger.ChatMediaWorkManager
 import com.azur.howfar.workManger.HowFarAnalyticsTypes
 import com.azur.howfar.workManger.OpenAppWorkManager
-import com.azur.howfar.workManger.SupportWorkManager
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.canhub.cropper.CropImageContract
+import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageView
 import com.canhub.cropper.options
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -130,10 +131,10 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
     private var tempMyProfile = UserProfile()
     private var mediaPlayer: MediaPlayer? = null
     private var handlerPresence = Handler(Looper.getMainLooper())
+    private var handlerTyping = Handler(Looper.getMainLooper())
     private var quotedChatData = ChatData()
     private val workManager = WorkManager.getInstance(this)
     private var localTime = 0L
-    private var isSupport = false
 
     private fun Activity.addSoftKeyboardVisibilityListener(
         visibleThresholdDp: Int = 100,
@@ -148,13 +149,26 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
         override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
             if (snapshot.exists()) {
                 val chatData = snapshot.getValue(ChatData::class.java)!!
-                when (chatData.isSupport) {
-                    true -> supportMethods()
-                    else -> realChatMethods()
-                }
                 if (chatData.senderuid != myAuth && !chatData.read) {
                     NotificationManagerCompat.from(this@ChatActivity2).cancelAll()
                 }
+                /*when {
+                    chatData.uniqueQuerableTime != "" -> {
+                        var chatDataDay = ChatData(messagetype = MessageType.CHAT_DAY, day = "Today")
+                        val nowInstance = Calendar.getInstance()
+                        nowInstance.timeInMillis = TimeUtils.localToUTC(nowInstance.timeInMillis.toString()).toLong()
+                        val nowDay = nowInstance.get(Calendar.DAY_OF_YEAR)
+                        val chatInstance = Calendar.getInstance()
+                        chatInstance.timeInMillis = chatData.uniqueQuerableTime.toLong()
+                        val chatDay = chatInstance.get(Calendar.DAY_OF_YEAR)
+                        if (nowDay != chatDay) {
+                            val x = Instant.ofEpochMilli(chatData.uniqueQuerableTime.toLong()).atZone(ZoneId.systemDefault())
+                            val dateFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.getDefault())
+                            chatDataDay.day = dateFormatter.format(x)
+                        }
+                        if (chatDataDay !in dataset) dataset.add(chatDataDay)
+                    }
+                }*/
                 scope.launch {
                     for (i in dataset) if (i.uniqueQuerableTime == chatData.uniqueQuerableTime || i.timesent == chatData.timesent) {
                         if (i.timesent == chatData.timesent) {
@@ -231,18 +245,11 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
         singleChatBubbleColor = pref.getString(getString(R.string.chatBubbleColor) + receiverUid, "#660099")!!
         val tempProfileJson = pref.getString(getString(R.string.this_user), "")
         if (tempProfileJson == "") return
-        emojIcon = EmojiPopup.Builder.fromRootView(binding.chatRoot).setOnEmojiPopupShownListener {}.build(binding.chatInput)
-        receiverUid = intent.getStringExtra("data")!!
-        isSupport = if (intent.hasExtra("isSupport")) {
-            supportMethods()
-            true
-        } else {
-            realChatMethods()
-            false
-        }
         tempMyProfile = Gson().fromJson(tempProfileJson, UserProfile::class.java)
         if (dataset.isEmpty()) showProgressBar() // CALL THIS NEXT
         showChatView()
+        emojIcon = EmojiPopup.Builder.fromRootView(binding.chatRoot).setOnEmojiPopupShownListener {}.build(binding.chatInput)
+        receiverUid = intent.getStringExtra("data")!!
 
         initReferences()
         //listenForIncomingMessage(true, otherUID)
@@ -263,20 +270,8 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
         }
     }
 
-    private fun supportMethods() {
-        binding.chatSendRoot.visibility = View.VISIBLE
-        binding.recordButton.visibility = View.GONE
-        binding.chatCamera.visibility = View.GONE
-        binding.chatAttachment.visibility = View.GONE
-        binding.more.visibility = View.GONE
-        binding.chatCallRoot.visibility = View.GONE
-    }
-
-    private fun realChatMethods() {
-    }
-
     private fun otherUserDetails() {
-        otherUserRef = otherUserRef.child(USER_DETAILS).child(receiverUid)
+        otherUserRef = otherUserRef.child("user_details").child(receiverUid)
         otherUserRef.get().addOnSuccessListener {
             receiverProfile = it.getValue(UserProfile::class.java)!!
             Glide.with(this).load(receiverProfile.image).centerCrop().into(binding.userImage)
@@ -288,8 +283,8 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
             val blockedList: ArrayList<String> = arrayListOf()
             if (blocked.exists()) {
                 for (i in blocked.children) blockedList.add(i.value.toString())
-                if (myAuth !in blockedList) if (!isSupport) sendOnlinePresence()
-            } else if (!isSupport) sendOnlinePresence()
+                if (myAuth !in blockedList) sendOnlinePresence()
+            } else sendOnlinePresence()
         }
     }
 
@@ -332,7 +327,9 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
                                 val localTimeUpdate = TimeUtils.UTCToLocal(typingData.time)
                                 val myTimeUpdate = Calendar.getInstance().timeInMillis.toString()
                                 val diffUpdate = TimeUtils.timeDiff(localTimeUpdate, myTimeUpdate)
-                                if (diffUpdate > 10) binding.userLastSeen.text = ""
+                                if (diffUpdate > 10) {
+                                    binding.userLastSeen.text = Util.formatSmartDateTime(localTime)
+                                }
                             }
                         }
                     }
@@ -482,7 +479,6 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
         chatsAdapter.activity = this
         chatsAdapter.groupOrChat = 0
         chatsAdapter.dataset = dataset
-        chatsAdapter.isSupport = isSupport
         chatsAdapter.deleteChatsViewModel = deleteChatsViewModel
         chatsAdapter.itemTouchHelper = itemTouchHelper
         chatsAdapter.pref = pref
@@ -580,7 +576,7 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
     private fun initReferences() {
         myProfileRef = myProfileRef.child(USER_DETAILS).child(myAuth)
         timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
-        chattingRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(myAuth).child(if (!isSupport) receiverUid else CONTACT_SUPPORT)
+        chattingRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(myAuth).child(receiverUid)
         receiverChattingRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(receiverUid).child(myAuth)
         chattingRef.get().addOnSuccessListener {
             if (it.exists()) for (snapshot in it.children) {
@@ -697,15 +693,6 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
                 }
             }
         }
-    }
-
-    private fun workManagerUpload(data: ChatData) {
-        val json = Gson().toJson(data)
-        pref.edit().putString(getString(R.string.support_data), json).apply()
-        val workRequest = OneTimeWorkRequestBuilder<SupportWorkManager>().addTag("moment upload")
-            .setInputData(workDataOf("otherUid" to receiverUid))
-            .build()
-        workManager.enqueue(workRequest)
     }
 
     private fun activeUserAnalytics(rawTime: String) {
@@ -842,21 +829,7 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
             }
             R.id.chatSend -> {
                 val message = binding.chatInput.text.toString().trim()
-                if (message == "") return
-                when (isSupport) {
-                    true -> {
-                        workManagerUpload(
-                            ChatData(
-                                senderuid = myAuth,
-                                msg = message,
-                                displaytitle = "New message",
-                                timesent = System.currentTimeMillis().toString(),
-                                isSupport = true,
-                            )
-                        )
-                    }
-                    else -> sendNewMsg(message)
-                }
+                sendNewMsg(message)
                 binding.chatInput.text!!.clear()
             }
             R.id.chat_back -> super.onBackPressed()
@@ -883,7 +856,6 @@ class ChatActivity2 : BaseActivity(), View.OnClickListener, QuoteHelper, MiscHel
         const val TRANSFER_HISTORY = "user_coins_transfer"
         const val CHAT_REFERENCE = "chat_reference"
         const val AUDIO_REFERENCE = "audio_reference"
-        const val CONTACT_SUPPORT = "CONTACT_SUPPORT"
         const val MY_BLOCKED_CONTACTS = "blocked_contacts"
         val REQUESTED_PERMISSIONS = arrayOf(
             Manifest.permission.RECORD_AUDIO,
@@ -907,7 +879,6 @@ class AttachmentFragment : BottomSheetDialogFragment(), View.OnClickListener {
     private val imageDialogViewModel: ImageDialogViewModel by activityViewModels()
     private val audioDialogViewModel: AudioDialogViewModel by activityViewModels()
     private val videoDialogViewModel: VideoDialogViewModel by activityViewModels()
-
     @RequiresApi(33)
     var permissionsStorageT = arrayOf(
         Manifest.permission.CAMERA,
@@ -915,7 +886,6 @@ class AttachmentFragment : BottomSheetDialogFragment(), View.OnClickListener {
         Manifest.permission.READ_MEDIA_AUDIO,
         Manifest.permission.READ_MEDIA_VIDEO,
     )
-
     @SuppressLint("Range")
     private val pickContactLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { dataResult ->
         try {
@@ -1006,16 +976,16 @@ class AttachmentFragment : BottomSheetDialogFragment(), View.OnClickListener {
         }
     }
 
-    val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val notGranted = arrayListOf<Boolean>()
-        for (per in permissions.values) if (!per) notGranted.add(per)
-        if (notGranted.isNotEmpty()) {
-            CallUtils(requireActivity(), requireActivity())
-                .permissionRationale(message = "HowFar needs permission to choose files and camera.\nGrant app permission")
-            return@registerForActivityResult
+    val permissionLauncher =  registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val notGranted = arrayListOf<Boolean>()
+            for (per in permissions.values) if (!per) notGranted.add(per)
+            if (notGranted.isNotEmpty()) {
+                CallUtils(requireActivity(), requireActivity())
+                    .permissionRationale(message = "HowFar needs permission to choose files and camera.\nGrant app permission")
+                return@registerForActivityResult
+            }
+            Toast.makeText(context, "Select again", Toast.LENGTH_LONG).show()
         }
-        Toast.makeText(context, "Select again", Toast.LENGTH_LONG).show()
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         attachmentBinding = AttachmentFragmentBinding.inflate(inflater, container, false)
@@ -1253,7 +1223,6 @@ class ChatAdapter2 : RecyclerView.Adapter<RecyclerView.ViewHolder>(), ItemTouchH
     var receiverUID: String = ""
     private lateinit var context: Context
     lateinit var activity: Activity
-    var isSupport = false
     private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
     var dataset: ArrayList<ChatData> = arrayListOf()
     private var selectedChats: ArrayList<ChatData> = arrayListOf()
@@ -1713,46 +1682,20 @@ class ChatAdapter2 : RecyclerView.Adapter<RecyclerView.ViewHolder>(), ItemTouchH
                     else -> {
                         holder.time.text = formattedTime
                         if (groupOrChat == 0) {
-                            if (!datum.read) {
-                                when (datum.isSupport) {
-                                    true -> {
-                                        val supportRef = FirebaseDatabase.getInstance().reference
-                                            .child(CHAT_REFERENCE)
-                                            .child(myAuth)
-                                            .child(CONTACT_SUPPORT)
-                                            .child(datum.uniqueQuerableTime)
-                                        supportRef.get().addOnSuccessListener {
-                                            if (it.exists()) {
-                                                val timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
-                                                timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
-                                                    timeRef.get().addOnSuccessListener { time ->
-                                                        datum.read = true
-                                                        datum.timeseen = time.value.toString()
-                                                        supportRef.setValue(datum)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    false -> {
-                                        val receiverChattingRef = FirebaseDatabase.getInstance().reference
-                                            .child(CHAT_REFERENCE)
-                                            .child(otherParticipant(datum.participants))
-                                            .child(myAuth)
-                                            .child(datum.uniqueQuerableTime)
-                                        receiverChattingRef.get().addOnSuccessListener { retrieveSnapshot ->
-                                            if (retrieveSnapshot.exists()) {
-                                                val timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
-                                                timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
-                                                    timeRef.get().addOnSuccessListener { time ->
-                                                        datum.read = true
-                                                        datum.timeseen = time.value.toString()
-                                                        receiverChattingRef.setValue(datum)
-                                                        myChattingRef.get()
-                                                            .addOnSuccessListener { myChatSnap -> if (myChatSnap.exists()) myChattingRef.setValue(datum) }
-                                                    }
-                                                }
-                                            }
+                            val receiverChattingRef = FirebaseDatabase.getInstance().reference
+                                .child(CHAT_REFERENCE)
+                                .child(otherParticipant(datum.participants))
+                                .child(myAuth)
+                                .child(datum.uniqueQuerableTime)
+                            if (!datum.read) receiverChattingRef.get().addOnSuccessListener { retrieveSnapshot ->
+                                if (retrieveSnapshot.exists()) {
+                                    val timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
+                                    timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
+                                        timeRef.get().addOnSuccessListener { time ->
+                                            datum.read = true
+                                            datum.timeseen = time.value.toString()
+                                            receiverChattingRef.setValue(datum)
+                                            myChattingRef.get().addOnSuccessListener { myChatSnap -> if (myChatSnap.exists()) myChattingRef.setValue(datum) }
                                         }
                                     }
                                 }
@@ -2467,7 +2410,7 @@ class ChatAdapter2 : RecyclerView.Adapter<RecyclerView.ViewHolder>(), ItemTouchH
         const val TRANSFER_HISTORY = "user_coins_transfer"
         const val USER_DETAILS = "user_details"
         const val CHAT_REFERENCE = "chat_reference"
-        const val CONTACT_SUPPORT = "CONTACT_SUPPORT"
+        const val GROUPS_MESSAGES = "groups_messages"
         const val MY_GROUPS_MESSAGES = "my_groups_messages"
         const val IMAGE_REFERENCE = "image_reference"
         const val AUDIO_REFERENCE = "audio_reference"

@@ -34,6 +34,9 @@ class MainApplication : Application(), UnCaughtException {
         setUpExceptionHandler()
         Firebase.database.setPersistenceEnabled(true)
         appNotificationManager.createChannel(
+            channelName = "General", channelId = "General", notificationImportance = NotificationManager.IMPORTANCE_DEFAULT, desc = "General HowFar Notifications"
+        )
+        appNotificationManager.createChannel(
             channelName = "Messages", channelId = "Messages", notificationImportance = NotificationManager.IMPORTANCE_HIGH, desc = "Messages"
         )
         appNotificationManager.createChannel(
