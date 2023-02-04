@@ -40,7 +40,7 @@ data class VfdTransferInitResponse(
 data class VfdTransferHistory(
     val message: String = "",
     val status: String = "",
-    val data: VFDHistory = VFDHistory()
+    val data: ArrayList<VFDHistory> = arrayListOf()
 )
 
 data class VFDHistory(

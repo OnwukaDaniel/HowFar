@@ -6,9 +6,7 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.azur.howfar.R
 import com.azur.howfar.databinding.FragmentSuccessFailureBinding
-import com.azur.howfar.models.WalletHistoryData
 import com.azur.howfar.utils.Util
-import com.google.gson.Gson
 import java.util.*
 
 class SuccessFailure : AppCompatActivity() {

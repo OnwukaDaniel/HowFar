@@ -389,7 +389,6 @@ class SendMoneyFragment : Fragment(), PaymentHelper, View.OnClickListener {
                 val response = client.newCall(request).execute()
                 val jsonResponse = response.body?.string()
                 val responseData = Gson().fromJson(jsonResponse, VfdAccountDetailsResponse::class.java)
-                println("JsonResponse ********************************************** $responseData")
                 if (response.code == 200) {
                     hideProgress()
                     val fragment = FragmentConfirmBankTransfer()

@@ -14,6 +14,9 @@ import com.azur.howfar.models.*
 import com.azur.howfar.viewmodel.BooleanViewModel
 import com.azur.howfar.viewmodel.TimeStringViewModel
 import com.azur.howfar.viewmodel.VFDTransferInitViewModel
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ServerValue
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,8 +32,11 @@ class FragmentConfirmBankTransfer : Fragment(), View.OnClickListener {
     private lateinit var binding: FragmentConfirmTransferBinding
     private var vfdAccountDetailsResponse = VfdAccountDetailsResponse()
     private var token = ""
+    private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
     private var initData = VFDTransferInitData()
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var historyRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference.child("history")
+    private var timeRef = FirebaseDatabase.getInstance().reference
     private val booleanViewModel by activityViewModels<BooleanViewModel>()
     private val timeStringViewModel by activityViewModels<TimeStringViewModel>()
     private val vFDTransferInitViewModel by activityViewModels<VFDTransferInitViewModel>()
@@ -38,6 +44,8 @@ class FragmentConfirmBankTransfer : Fragment(), View.OnClickListener {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentConfirmTransferBinding.inflate(inflater, container, false)
         hideProgress()
+        timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
+        historyRef = historyRef.child(myAuth)
         timeStringViewModel.time.observe(viewLifecycleOwner) {
             token = it
             println("vFDTransferInitViewModel ************************************** $token")
@@ -124,7 +132,24 @@ class FragmentConfirmBankTransfer : Fragment(), View.OnClickListener {
                     requireActivity().runOnUiThread {
                         responseData.message
                         booleanViewModel.setSwitch(true)
-                        success()
+                        val historyData = WalletHistoryData(
+                            myUid = myAuth,
+                            amount = initData.amount,
+                            reference = responseData.data.reference,
+                            bankWallet = TranBank.BANK,
+                            description = "Debit Bank transaction to ${initData.accountNumber}",
+                            direction = TranDirection.SENT,
+                            otherUid = "",
+                        )
+                        timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
+                            timeRef.get().addOnSuccessListener { snapshot ->
+                                if (snapshot.exists()) {
+                                    val rawTime = snapshot.value.toString()
+                                    historyRef.child(rawTime).setValue(historyData)
+                                    success()
+                                }
+                            }
+                        }
                     }
                 }
                 hideProgress()
@@ -155,6 +180,7 @@ class FragmentConfirmBankTransfer : Fragment(), View.OnClickListener {
     private fun success() {
         if (activity != null && isAdded) {
             requireActivity().runOnUiThread {
+                requireActivity().finish()
                 startActivity(
                     Intent(requireContext(), SuccessFailure::class.java)
                         .putExtra("amount", initData.amount)
@@ -169,6 +195,7 @@ class FragmentConfirmBankTransfer : Fragment(), View.OnClickListener {
     private fun failure(message: String) {
         if (activity != null && isAdded) {
             requireActivity().runOnUiThread {
+                requireActivity().finish()
                 startActivity(
                     Intent(requireContext(), SuccessFailure::class.java)
                         .putExtra("amount", initData.amount)

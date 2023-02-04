@@ -242,7 +242,7 @@ class NetworkJobScheduler : JobService() {
 
     private fun participantByUid(chatUser: ChatData, uid: String): ParticipantTempData {
         val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
-        for (i in chatUser.participantsTempData) if (i.uid != uid) return i
+        for (i in chatUser.participantsTempData) if (i.uid == uid) return i
         return ParticipantTempData()
     }
 }

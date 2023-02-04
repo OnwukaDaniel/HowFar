@@ -5,6 +5,7 @@ data class WalletHistoryData(
     var otherUid: String = "",
     var amount: String = "",
     var reference: String = "",
+    var description: String = "",
     var toAccountName: String = "",
     var toAccountBank: String = "",
     var bankWallet: Int = TranBank.WALLET,
