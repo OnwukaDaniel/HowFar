@@ -310,7 +310,7 @@ class FeedAdapter : RecyclerView.Adapter<FeedAdapter.FeedViewHolder>() {
                                     holder.likeButton.setImageResource(R.drawable.like_white)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendLoveLikeHFCoin(LIKE_VALUE, othersRef, datum.moment.creatorUid, myProfile = myProfile, datum.moment.timePosted)
+                                else -> HFCoinUtils.sendHFCoin(LIKE_VALUE, othersRef, datum.moment.creatorUid, myProfile = myProfile, datum.moment.timePosted)
                             }
                         } else {
                             holder.tvLikes.text = originalLike
@@ -339,7 +339,7 @@ class FeedAdapter : RecyclerView.Adapter<FeedAdapter.FeedViewHolder>() {
                                     holder.lovesButton.setImageResource(R.drawable.heart_off)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendLoveLikeHFCoin(LOVE_VALUE, othersRef, datum.moment.creatorUid, myProfile = myProfile, datum.moment.timePosted)
+                                else -> HFCoinUtils.sendHFCoin(LOVE_VALUE, othersRef, datum.moment.creatorUid, myProfile = myProfile, datum.moment.timePosted)
                             }
                         } else {
                             holder.tvLoves.text = originalLove

@@ -259,7 +259,6 @@ class HostLiveActivity : AppCompatActivity(), View.OnClickListener {
             showMessage("A user joined")
         }
 
-        @SuppressLint("SetTextI18n")
         override fun onJoinChannelSuccess(channel: String, uid: Int, elapsed: Int) = runOnUiThread {
             activeUserAnalytics()
             isJoined = true
@@ -270,6 +269,7 @@ class HostLiveActivity : AppCompatActivity(), View.OnClickListener {
             val ref = FirebaseDatabase.getInstance().reference.child(LIVE_BROADCAST_CREATOR).child(myAuth)
             ref.setValue(broadcastCallData).addOnSuccessListener {
                 if (broadcastCallData.uids.isNotEmpty()) sendInvites()
+                // TODO: Subscribe to the live broadcast topic here
             }.addOnFailureListener { Snackbar.make(binding.root, "Unable to go live", Snackbar.LENGTH_INDEFINITE).show() }
 
             val loves = FirebaseDatabase.getInstance()
@@ -277,17 +277,13 @@ class HostLiveActivity : AppCompatActivity(), View.OnClickListener {
                 .child(broadcastCallData.callerUid)
                 .child(broadcastCallData.timeCalled)
             ValueEventLiveData(loves).observe(this@HostLiveActivity) {
-                var likeCount = 0
-                var loveCount = 0
                 when (it.second) {
                     onDataChange -> for (i in it.first.children) {
                         lovesList = lovesList.plus(i.getValue(MomentDetails::class.java)!!)
-                        if (i.getValue(MomentDetails::class.java)!!.likes.profileUid != "") likeCount++
-                        else if (i.getValue(MomentDetails::class.java)!!.loves.profileUid != "") loveCount++
                     }
                 }
                 binding.tvLove.text = lovesList.size.toString()
-                binding.tvCoins.text = (likeCount * Const.LIKE_VALUE + loveCount * Const.LOVE_VALUE).toString()
+                binding.tvCoins.text = (lovesList.size * Const.LOVE_VALUE).toString()
             }
         }
 
@@ -383,7 +379,7 @@ class HostLiveActivity : AppCompatActivity(), View.OnClickListener {
 
     fun onclickShare(view: View?) {
         Log.d(TAG, "onClickEmojiIcon: ")
-    }
+    } ///   filter  gift sticker emoji
 
     private fun endBroadcast(msg: String = "Are you sure you want to end broadcast session?") {
         val alertDialog = AlertDialog.Builder(this)
@@ -395,23 +391,18 @@ class HostLiveActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun leaveCallExt() = runOnUiThread {
-        var likeCount = 0
-        var loveCount = 0
-        for (i in lovesList) {
-            if (i.likes.profileUid != "") likeCount++
-            else if (i.loves.profileUid != "") loveCount++
-        }
-        var coinCount = likeCount * Const.LIKE_VALUE + loveCount * Const.LOVE_VALUE
+        println("Love counts *************************************************** $lovesList")
         agoraEngine!!.enableLocalVideo(false)
         broadcastCallData.answerType = CallAnswerType.ENDED
         FirebaseDatabase.getInstance().reference.child(LIVE_BROADCAST_CREATOR).child(myAuth).setValue(broadcastCallData)
+        // TODO: Unsubscribe from the live broadcast topic here
         for (i in broadcastCallData.uids) FirebaseDatabase.getInstance().reference.child(LIVE_BROADCAST).child(i).child(myAuth).setValue(broadcastCallData)
         val intent = Intent(this, LiveSummaryActivity::class.java)
         val json = Gson().toJson(broadcastCallData)
         val jsonUserProfile = Gson().toJson(userProfile)
         intent.putExtra("comments", commentList.size)
         intent.putExtra("profile", jsonUserProfile)
-        intent.putExtra("loveCount", coinCount)
+        intent.putExtra("loveCount", lovesList.size)
         intent.putExtra("broadcastTime", broadcastTime)
         intent.putExtra("data", json)
         finish()

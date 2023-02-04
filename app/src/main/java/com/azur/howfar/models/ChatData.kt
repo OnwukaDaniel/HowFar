@@ -26,7 +26,6 @@ data class ChatData(
     var messagetype: Int = TEXT,
     var newMessages: Int = 0,
     var isAdmin: Boolean = false,
-    var isSupport: Boolean = false,
     var phoneData: PhoneData = PhoneData(),
     var imageData: ImageData = ImageData(),
     var audioData: AudioData = AudioData(),

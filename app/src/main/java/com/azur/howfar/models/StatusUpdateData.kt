@@ -12,7 +12,6 @@ data class StatusUpdateData(
     var imageUri: String = "",
     var videoUri: String = "",
     var senderPhone: String = "",
-    var isAdmin: Boolean = false,
     var captionBackgroundColor: String = "#660099",
     var statusDeliveryType: Int = PENDING,
 )

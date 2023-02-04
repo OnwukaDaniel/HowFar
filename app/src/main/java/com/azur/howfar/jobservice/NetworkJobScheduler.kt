@@ -67,7 +67,7 @@ class NetworkJobScheduler : JobService() {
         override fun onDataChange(snapshot: DataSnapshot) {
             if (snapshot.exists()) {
                 var callData = snapshot.getValue(CallData::class.java)!!
-                FirebaseAuth.getInstance().currentUser ?: return
+                if (FirebaseAuth.getInstance().currentUser == null) return
                 if (callData.timeCalled == "") return
                 val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
                 val callTime = TimeUtils.UTCToLocal(callData.timeCalled).toLong() / 1000 // CALL EXPIRED IMPLEMENTATION
@@ -104,7 +104,7 @@ class NetworkJobScheduler : JobService() {
         @SuppressLint("UnspecifiedImmutableFlag")
         override fun onDataChange(snapshot: DataSnapshot) {
             var notificationIndex = 1000
-            FirebaseAuth.getInstance().currentUser ?: return
+            if (FirebaseAuth.getInstance().currentUser == null) return
             val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
             if (snapshot.exists()) {
                 messageList.clear()
@@ -112,7 +112,6 @@ class NetworkJobScheduler : JobService() {
                     val datasetEachUser: ArrayList<ChatData> = arrayListOf()
                     for (x in i.children) {
                         val chatData = x.getValue(ChatData::class.java)!!
-                        if(chatData.participantsTempData.isEmpty()) continue
                         if (chatData.participantsTempData.first().phone == "" || chatData.participantsTempData.last().phone == "") return
                         if (!chatData.read && chatData.senderuid != myAuth) datasetEachUser.add(chatData)
                     }

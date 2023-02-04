@@ -7,18 +7,21 @@ import android.widget.Toast
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.azur.howfar.R
-import com.azur.howfar.models.UserProfile
-import com.azur.howfar.user.EditProfileActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
+import com.azur.howfar.models.UserProfile
+import com.azur.howfar.user.EditProfileActivity
+import com.azur.howfar.utils.ImageCompressor
+import java.io.ByteArrayInputStream
 import java.io.File
 
 class ProfilePicsWorkManager(private val context: Context, params: WorkerParameters) : Worker(context, params) {
     private val uid = FirebaseAuth.getInstance().currentUser
     private lateinit var pref: SharedPreferences
     private var ref = FirebaseDatabase.getInstance().reference
+    private var imageStream: ByteArrayInputStream? = null
     private var profileData = UserProfile()
 
     override fun doWork(): Result {
@@ -38,6 +41,8 @@ class ProfilePicsWorkManager(private val context: Context, params: WorkerParamet
         if (uid?.uid == null) return
         val uri = Uri.fromFile(File(profileData.image))!!
         val imageRef = FirebaseStorage.getInstance().reference.child(EditProfileActivity.PROFILE_IMAGE).child(uid.uid)
+        val pair: Pair<ByteArrayInputStream, ByteArray> = ImageCompressor.compressImage(uri, context, null)
+        imageStream = pair.first
         val imageUploadTask = imageRef.putFile(uri)
 
         imageUploadTask.continueWith { task ->

@@ -510,7 +510,7 @@ class WatchLiveActivity : AppCompatActivity(), View.OnClickListener {
                                     binding.lovesButton.setImageResource(com.like.view.R.drawable.heart_off)
                                     Toast.makeText(this, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendLoveLikeHFCoin(
+                                else -> HFCoinUtils.sendHFCoin(
                                     LOVE_VALUE,
                                     othersRef = lovesRef,
                                     broadcastCallData.callerUid,
@@ -529,23 +529,6 @@ class WatchLiveActivity : AppCompatActivity(), View.OnClickListener {
                         .child(broadcastCallData.callerUid)
                         .child(broadcastCallData.timeCalled)
 
-                    Glide.with(this).asGif().load(R.drawable.like_gif).listener(object :RequestListener<GifDrawable>{
-                        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<GifDrawable>?, isFirstResource: Boolean): Boolean {
-                            return false
-                        }
-
-                        override fun onResourceReady(
-                            resource: GifDrawable?,
-                            model: Any?,
-                            target: Target<GifDrawable>?,
-                            dataSource: DataSource?,
-                            isFirstResource: Boolean
-                        ): Boolean {
-                            resource?.setLoopCount(1)
-                            return false
-                        }
-                    }).into(binding.loveGif)
-
                     binding.likeButton.setImageResource(R.drawable.like_blue)
 
                     val historyRef = FirebaseDatabase.getInstance().reference.child(FeedAdapter.TRANSFER_HISTORY).child(myAuth)
@@ -557,7 +540,7 @@ class WatchLiveActivity : AppCompatActivity(), View.OnClickListener {
                                     binding.likeButton.setImageResource(R.drawable.like_white)
                                     Toast.makeText(this, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendLoveLikeHFCoin(
+                                else -> HFCoinUtils.sendHFCoin(
                                     LIKE_VALUE,
                                     othersRef = lovesRef,
                                     broadcastCallData.callerUid,

@@ -29,7 +29,7 @@ import com.azur.howfar.models.VideoPost
 import com.azur.howfar.posts.FeedAdapter
 import com.azur.howfar.retrofit.Const
 import com.azur.howfar.utils.HFCoinUtils
-import com.azur.howfar.utils.HFCoinUtils.sendLoveLikeHFCoin
+import com.azur.howfar.utils.HFCoinUtils.sendHFCoin
 import com.azur.howfar.viewmodel.MomentDetailsViewModel
 import com.azur.howfar.viewmodel.VideoPostsViewModel
 import com.bumptech.glide.Glide
@@ -46,6 +46,7 @@ import com.google.gson.Gson
 import com.tonyodev.fetch2.*
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
+import java.util.*
 
 class FragmentViewSingleVideo : Fragment(), CustomExoplayerMethods, View.OnClickListener {
     private lateinit var binding: ActivityViewSingleVideoBinding
@@ -245,11 +246,11 @@ class FragmentViewSingleVideo : Fragment(), CustomExoplayerMethods, View.OnClick
                 ref.get().addOnSuccessListener {
                     if (it.exists()) {
                         userProfile = it.getValue(UserProfile::class.java)!!
-                        sendLoveLikeHFCoin(hfCoin, othersRef = otherRef, creatorUid = videoPost.creatorUid, myProfile = userProfile, videoPost.timePosted)
+                        sendHFCoin(hfCoin, othersRef = otherRef, creatorUid = videoPost.creatorUid, myProfile = userProfile, videoPost.timePosted)
                     }
                 }
             }
-            else -> sendLoveLikeHFCoin(hfCoin, othersRef = otherRef, creatorUid = videoPost.creatorUid, myProfile = userProfile, videoPost.timePosted)
+            else -> sendHFCoin(hfCoin, othersRef = otherRef, creatorUid = videoPost.creatorUid, myProfile = userProfile, videoPost.timePosted)
         }
     }
 

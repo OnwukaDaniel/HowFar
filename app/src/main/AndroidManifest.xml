@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
     <uses-permission android:name="android.Manifest.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -30,6 +31,7 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
         android:name=".MainApplication"
@@ -42,10 +44,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.HowFar"
         android:usesCleartextTraffic="true">
-        <activity
-            android:name=".howfarwallet.ActivityFingerPrint"
-            android:noHistory="true"
-            android:exported="false" />
         <activity
             android:name=".activity.ContactUsActivity"
             android:exported="false" />
@@ -148,9 +146,8 @@
 
         <activity
             android:name=".user.wallet.ActivityHFCoinTransfer"
-            android:theme="@style/Theme.HowFar.Splash"
             android:windowSoftInputMode="stateHidden" />
-        <activity android:name=".activity.SplashActivityLike" />
+        <activity android:name=".activity.SpleshActivityLike" />
         <activity
             android:name=".howfarchat.chat.ChatActivity2"
             android:windowSoftInputMode="adjustResize" />
@@ -170,9 +167,6 @@
         <activity android:name=".howfarchat.chat.ActivityCustomizeChat" />
         <activity android:name=".howfarchat.chat.ActivityCustomizeChatWallpaper" />
         <activity android:name=".reels.VideoListActivity" />
-        <activity android:name=".howfarchat.chat.ChatActivitySupport" />
-        <activity android:name=".howfarwallet.SuccessFailureFragment" />
-        <activity android:name=".howfarwallet.SuccessFailure" />
 
         <receiver
             android:name=".broadcasts.DirectReceiver"
@@ -200,6 +194,29 @@
             android:name=".jobservice.LikeJobService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Set custom default icon. This is used when no icon is set for incoming notification messages.
+     See README(https://goo.gl/l4GJaQ) for more. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/app_logo_round" />
+        <!-- Set color used with incoming notification messages. This is used when no color is set for the incoming
+             notification message. See README(https://goo.gl/6BKBk7) for more. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colorAccent" />
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="@string/default_notification_channel_id" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -7,16 +7,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
+import com.google.firebase.database.FirebaseDatabase
+import com.google.gson.Gson
 import com.azur.howfar.R
 import com.azur.howfar.databinding.FragmentBankListBinding
-import com.azur.howfar.viewmodel.VFDAccreditedBanksVieModel
-import com.google.android.material.snackbar.Snackbar
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -28,15 +26,10 @@ class FragmentBankList : Fragment() {
     private lateinit var binding: FragmentBankListBinding
     private val scope = CoroutineScope(Dispatchers.IO)
     private val adapter = BanksAdapter()
-    private var token = ""
-    private val vFDTransferToVieModel by activityViewModels<VFDAccreditedBanksVieModel>()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentBankListBinding.inflate(inflater, container, false)
-        token = requireArguments().getString("token")!!
         fetchBanks()
-        adapter.activity = requireActivity()
-        adapter.vFDTransferToVieModel = vFDTransferToVieModel
         return binding.root
     }
 
@@ -48,24 +41,33 @@ class FragmentBankList : Fragment() {
         binding.banksLoading.visibility = View.VISIBLE
         try {
             val header = "Authorization"
-            val key = "Bearer: $token"
-            scope.launch {
-                val url = "https://howfarserver.online/v1/bank/list"
-                val client = OkHttpClient()
-                val request = Request.Builder().url(url).addHeader(header, key).build()
-                val response = client.newCall(request).execute()
-                val jsonResponse = response.body?.string()
-                if (response.code == 200) {
-                    if (activity != null && isAdded) requireActivity().runOnUiThread {
-                        hideLoading()
-                        val banks = Gson().fromJson(jsonResponse, VFDBanks::class.java)
-                        adapter.dataset = banks.data
-                        binding.banksRv.adapter = adapter
-                        binding.banksRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+            val key = ": Bearer 72668e1e-9edf-311c-b36a-45056bda2185"
+            val ref = FirebaseDatabase.getInstance().reference.child("howFar").child("vfd_credentials")
+
+            ref.get().addOnSuccessListener {
+                scope.launch {
+                    val url = "https://devesb.vfdbank.systems:8263/vfd-wallet/1.1/wallet2/bank"
+                    val client = OkHttpClient()
+                    val request = Request.Builder().url(url).addHeader(header, key).build()
+                    val response = client.newCall(request).execute()
+                    val jsonResponse = response.body?.string()
+                    println("Code ********************************************** ${response.code}")
+                    println("JsonResponse ********************************************** $jsonResponse")
+                    if (response.code == 200) {
+                        if (activity != null && isAdded) requireActivity().runOnUiThread{
+                            hideLoading()
+                            val banks = Gson().fromJson(jsonResponse, VFDBanks::class.java)
+                            adapter.dataset = banks.data.bank
+                            binding.banksRv.adapter = adapter
+                            binding.banksRv.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+                        }
+                    } else {
+                        if (activity != null && isAdded) requireActivity().runOnUiThread { hideLoading() }
                     }
-                } else {
-                    if (activity != null && isAdded) requireActivity().runOnUiThread { hideLoading() }
                 }
+            }.addOnFailureListener {
+                showMsg("Network exception")
+                if (activity != null && isAdded) requireActivity().runOnUiThread { hideLoading() }
             }
         } catch (e: SocketTimeoutException) {
             showMsg("Time out")
@@ -79,16 +81,17 @@ class FragmentBankList : Fragment() {
 }
 
 class BanksAdapter : RecyclerView.Adapter<BanksAdapter.ViewHolder>() {
-    var dataset: ArrayList<VFDBanksList> = arrayListOf()
+    var dataset: ArrayList<VFDAccreditedBanks> = arrayListOf()
     lateinit var context: Context
     lateinit var activity: Activity
-    lateinit var vFDTransferToVieModel: VFDAccreditedBanksVieModel
+    private val alpha = arrayListOf("A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z")
 
     init {
         setHasStableIds(true)
     }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val alph: TextView = itemView.findViewById(R.id.bank_alpha)
         val name: TextView = itemView.findViewById(R.id.bank_name)
     }
 
@@ -100,14 +103,30 @@ class BanksAdapter : RecyclerView.Adapter<BanksAdapter.ViewHolder>() {
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val datum = dataset[position]
-        holder.name.text = datum.bankName
+        holder.name.text = datum.name
+        if (holder.absoluteAdapterPosition == 0) holder.alph.text = alpha[0]
         if (holder.absoluteAdapterPosition - 1 >= 0 && holder.absoluteAdapterPosition + 1 < dataset.size) {
             //previousAndNext(holder)
         }
 
         holder.itemView.setOnClickListener {
-            vFDTransferToVieModel.setBank(datum)
-            (activity as AppCompatActivity).onBackPressed()
+
+            //(activity as AppCompatActivity).supportFragmentManager.beginTransaction().addToBackStack("send").replace(R.id.wallet_root, FragmentSendMoney())
+            //    .commit()
+        }
+    }
+
+    private fun previousAndNext(holder: ViewHolder) {
+        val position = holder.absoluteAdapterPosition
+        val nextPosition = holder.absoluteAdapterPosition + 1
+        val previousPosition = holder.absoluteAdapterPosition - 1
+        if (dataset[position].code != dataset[previousPosition].code) {
+            holder.alph.visibility = View.VISIBLE
+            holder.alph.text = alpha[position]
+        }
+        if (dataset[position].code != dataset[nextPosition].code) {
+            holder.alph.visibility = View.VISIBLE
+            holder.alph.text = dataset[position].code
         }
     }
 
@@ -119,20 +138,14 @@ class BanksAdapter : RecyclerView.Adapter<BanksAdapter.ViewHolder>() {
 data class VFDBanks(
     var status: String = "",
     var message: String = "",
-    var data: ArrayList<VFDBanksList> = arrayListOf(),
+    var data: VFDBanksList = VFDBanksList(),
 )
 
 data class VFDBanksList(
-    var bankName: String = "",
-    var bankCode: String = ""
+    var bank: ArrayList<VFDAccreditedBanks> = arrayListOf()
 )
 
 data class VFDAccreditedBanks(
     var name: String = "",
     var code: String = ""
-)
-
-data class VFDTransferBank(
-    var accountNumber: String = "",
-    var bankCode: String = ""
 )

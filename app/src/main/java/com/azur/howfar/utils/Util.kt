@@ -176,22 +176,6 @@ object Util {
         return "$day/$month/$year at $hour:$minute $amPm"
     }
 
-    fun formatDate(time: String): String {
-        if (time.isEmpty()) return ""
-        try {
-            time.toLong()
-        } catch (e: Exception) {
-            return ""
-        }
-        val dateTime = time.toLong()
-        val calenderInstance: Calendar = Calendar.getInstance()
-        calenderInstance.timeInMillis = dateTime
-        val day = calenderInstance.get(Calendar.DAY_OF_MONTH)
-        val month = calenderInstance.get(Calendar.MONTH) + 1
-        val year = calenderInstance.get(Calendar.YEAR)
-        return "$day/$month/$year"
-    }
-
     fun formatDateTime(time: String): String {
         if (time.isEmpty()) return ""
         try {
