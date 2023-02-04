@@ -4,10 +4,13 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.GravityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.azur.howfar.R
 import com.azur.howfar.activity.BaseActivity
@@ -36,11 +39,16 @@ class ActivityWallet : BaseActivity(), View.OnClickListener {
     private var walletsSecurityRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference
     private var walletsRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference
     private var profileRef = FirebaseDatabase.getInstance().reference
+    private var dataset = arrayListOf<VFDHistory>()
+    private var historyAdapter = HistoryAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         showLoading()
+        historyAdapter.dataset = dataset
+        binding.rvHistory.adapter = historyAdapter
+        binding.rvHistory.layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
 
         profileRef = profileRef.child("user_details").child(myAuth)
         walletsRef = walletsRef.child("wallets").child(myAuth)
@@ -172,14 +180,20 @@ class ActivityWallet : BaseActivity(), View.OnClickListener {
             val jsonResponse = response.body?.string()
             val responseData = Gson().fromJson(jsonResponse, VfdTransferHistory::class.java)
             if (response.code == 200) {
+                println("Data success *********************************** $responseData")
                 showMsg(responseData.message)
                 responseData.message
+                dataset = responseData.data
+                runOnUiThread{ historyAdapter.notifyDataSetChanged() }
             } else if (response.code in 400..499) {
+                println("Data *********************************** $responseData")
                 showMsg(responseData.message)
             } else {
+                println("Data *********************************** $responseData")
                 showMsg(response.message)
             }
         } catch (e: SocketTimeoutException) {
+            println("Data *********************************** ${e.message}")
             showMsg("${e.message}")
         }
     }
@@ -339,22 +353,27 @@ data class HowFarPayData(
     var dob: String = "",
 )
 
-/*
-class HistoryAdapter: RecyclerView.Adapter<HistoryAdapter.ViewHolder>(){
+class HistoryAdapter : RecyclerView.Adapter<HistoryAdapter.ViewHolder>() {
     var dataset = arrayListOf<VFDHistory>()
+    lateinit var context: Context
 
-    class ViewHolder(itemView: View): RecyclerView.ViewHolder(itemView){
-
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tran_image: TextView = itemView.findViewById(R.id.tran_image)
+        val tran_desc: TextView = itemView.findViewById(R.id.tran_desc)
+        val tran_amount: TextView = itemView.findViewById(R.id.tran_amount)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        //var view =
-        return ViewHolder()
+        context = parent.context
+        val view = LayoutInflater.from(context).inflate(R.layout.transaction_card, parent, false)
+        return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        var datum = dataset[position]
+        val datum = dataset[position]
+        holder.tran_desc.text = datum.details
+        holder.tran_amount.text = datum.amount
     }
 
     override fun getItemCount() = dataset.size
-}*/
+}

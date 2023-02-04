@@ -38,14 +38,14 @@ class FragmentSendConfirmation : Fragment(), View.OnClickListener {
     private var vFDTransferData = VFDTransferData()
     private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
     var userProfile: UserProfile = UserProfile()
+    private var historyRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference.child("history")
+    private var otherHistoryRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference.child("history")
     private var timeRef = FirebaseDatabase.getInstance().reference
     private val booleanViewModel by activityViewModels<BooleanViewModel>()
-    private var historyRef = FirebaseDatabase.getInstance("https://howfar-b24ef-wallet.firebaseio.com").reference.child("history")
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentSendConfirmationBinding.inflate(inflater, container, false)
-        initWallet()
         getFragmentData()
+        initWallet()
         showProceedText()
         binding.inputProceed.setOnClickListener(this)
         binding.inputBack.setOnClickListener(this)
@@ -66,6 +66,7 @@ class FragmentSendConfirmation : Fragment(), View.OnClickListener {
 
     private fun initWallet() {
         historyRef = historyRef.child(myAuth)
+        otherHistoryRef = otherHistoryRef.child(userProfile.uid)
         timeRef = FirebaseDatabase.getInstance().reference.child("time").child(myAuth)
     }
 
@@ -123,6 +124,7 @@ class FragmentSendConfirmation : Fragment(), View.OnClickListener {
     private fun failure(message: String) {
         if (activity != null && isAdded) {
             requireActivity().runOnUiThread {
+                requireActivity().finish()
                 startActivity(
                     Intent(requireContext(), SuccessFailure::class.java)
                         .putExtra("amount", vFDTransferData.amount)
@@ -137,6 +139,7 @@ class FragmentSendConfirmation : Fragment(), View.OnClickListener {
     private fun success(historyData: WalletHistoryData) {
         if (activity != null && isAdded) {
             requireActivity().runOnUiThread {
+                requireActivity().finish()
                 startActivity(
                     Intent(requireContext(), SuccessFailure::class.java)
                         .putExtra("amount", historyData.amount)
@@ -151,64 +154,61 @@ class FragmentSendConfirmation : Fragment(), View.OnClickListener {
     private fun doTransfer(data: ResolveData) {
         scope.launch {
             try {
-                val header = "Authorization"
-                val key = "Bearer ${vFDTransferData.token}"
-                val body: RequestBody = Gson().toJson(data).toRequestBody("application/json".toMediaTypeOrNull())
-                val url = "https://howfarserver.online/v1/transfer/wallet/complete"
-                val client = OkHttpClient()
-                val request = Request.Builder().url(url).addHeader(header, key).post(body).build()
-                val response = client.newCall(request).execute()
-                val jsonResponse = response.body?.string()
-                val responseData = Gson().fromJson(jsonResponse, ResolveResponse::class.java)
-                println("jsonResponse ********************************************** $jsonResponse")
-                println("responseData ********************************************** $responseData")
-                if (response.code == 200) {
-                    if (activity != null && isAdded) {
-                        requireActivity().runOnUiThread {
-                            booleanViewModel.setSwitch(true)
-                        }
-                    }
-                    val historyData = WalletHistoryData(
-                        myUid = myAuth,
-                        amount = vFDTransferData.amount,
-                        reference = responseData.data.reference,
-                        bankWallet = TranBank.WALLET,
-                        direction = TranDirection.SENT,
-                        otherUid = userProfile.uid,
-                    )
-                    timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
-                        timeRef.get().addOnSuccessListener { snapshot ->
-                            if (snapshot.exists()) {
-                                val rawTime = snapshot.value.toString()
-                                historyRef.child(rawTime).setValue(historyData)
-                                    .addOnSuccessListener {
-                                        showMsg("Sent successfully")
-                                        success(historyData)
-                                    }.addOnFailureListener {
-                                        if (activity != null && isAdded) {
-                                            requireActivity().runOnUiThread {
-                                                startActivity(
-                                                    Intent(requireContext(), SuccessFailure::class.java)
-                                                        .putExtra("data", Gson().toJson(historyData))
-                                                        .putExtra("name", userProfile.name)
-                                                        .putExtra("isSuccess", true)
-                                                )
-                                                requireActivity().overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
-                                            }
-                                        }
-                                    }
+                FirebaseDatabase.getInstance().reference.child(myAuth).get().addOnSuccessListener { my ->
+                    if (my.exists()) {
+                        val myProfile = my.getValue(UserProfile::class.java)!!
+                        val header = "Authorization"
+                        val key = "Bearer ${vFDTransferData.token}"
+                        val body: RequestBody = Gson().toJson(data).toRequestBody("application/json".toMediaTypeOrNull())
+                        val url = "https://howfarserver.online/v1/transfer/wallet/complete"
+                        val client = OkHttpClient()
+                        val request = Request.Builder().url(url).addHeader(header, key).post(body).build()
+                        val response = client.newCall(request).execute()
+                        val jsonResponse = response.body?.string()
+                        val responseData = Gson().fromJson(jsonResponse, ResolveResponse::class.java)
+                        println("responseData ********************************************** $responseData")
+                        if (response.code == 200) {
+                            if (activity != null && isAdded) {
+                                requireActivity().runOnUiThread {
+                                    booleanViewModel.setSwitch(true)
+                                }
                             }
+                            var historyData = WalletHistoryData(
+                                myUid = myAuth,
+                                amount = vFDTransferData.amount,
+                                reference = responseData.data.reference,
+                                bankWallet = TranBank.WALLET,
+                                direction = TranDirection.SENT,
+                                description = "Debit Bank transaction to ${userProfile.name}",
+                                otherUid = userProfile.uid,
+                            )
+                            timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
+                                timeRef.get().addOnSuccessListener { snapshot ->
+                                    if (snapshot.exists()) {
+                                        val rawTime = snapshot.value.toString()
+                                        historyRef.child(rawTime).setValue(historyData)
+                                            .addOnSuccessListener {
+                                                showMsg("Sent successfully")
+                                                success(historyData)
+                                                historyData.description = "Credit Bank transaction from ${myProfile.name}"
+                                                historyData.direction = TranDirection.RECEIVED
+                                                otherHistoryRef.child(rawTime).setValue(historyData)
+                                            }.addOnFailureListener {
+                                                failure(response.message)
+                                            }
+                                    }
+                                }.addOnFailureListener { failure(response.message) }
+                            }.addOnFailureListener {
+                                failure(response.message)
+                            }
+                        } else if (response.code in 400..499) {
+                            showMsg(response.message)
+                            failure(response.message)
+                        } else {
+                            showMsg(response.message)
+                            failure(response.message)
                         }
-                            .addOnFailureListener { failure(response.message) }
-                    }.addOnFailureListener {
-                        failure(response.message)
                     }
-                } else if (response.code in 400..499) {
-                    showMsg(response.message)
-                    failure(response.message)
-                } else {
-                    showMsg(response.message)
-                    failure(response.message)
                 }
             } catch (e: SocketTimeoutException) {
                 showMsg("${e.message}")
