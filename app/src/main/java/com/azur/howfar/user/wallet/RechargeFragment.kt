@@ -89,8 +89,48 @@ class RechargeFragment : Fragment(), CoinPurchaseAdapter.OnCoinPlanClickListener
     }
 
     private fun makePayment(coinPlan: CoinPlan, userProfile: UserProfile) {
+        val currencies = arrayOf(
+                "British Pound Sterling        GBP",
+                "Canadian Dollar        CAD",
+                "Central African CFA Franc        XAF",
+                "Chilean Peso        CLP",
+                "Colombian Peso        COP",
+                "Egyptian Pound        EGP",
+                "SEPA        EUR",
+                "Ghanaian Cedi        GHS",
+                "Guinean Franc        GNF",
+                "Kenyan Shilling        KES",
+                "Malawian Kwacha        MWK",
+                "Moroccan Dirham        MAD",
+                "Nigerian Naira        NGN",
+                "Rwandan Franc        RWF",
+                "Sierra Leonean Leone        SLL",
+                "São Tomé and Príncipe dobra        STD",
+                "South African Rand        ZAR",
+                "Tanzanian Shilling        TZS",
+                "Ugandan Shilling        UGX",
+                "United States Dollar        USD",
+                "West African CFA Franc BCEAO        XOF",
+                "Zambian Kwacha        ZMW",
+            )
+
+        val alert = AlertDialog.Builder(requireContext())
+        alert.setTitle("Please select your preferred currency to pay in.")
+        alert.setItems(currencies) { dialog, which ->
+            val currency = currencies[which]
+            startFlutterWave(coinPlan, userProfile, currency)
+            dialog.dismiss()
+        }
+        alert.setNegativeButton("Cancel") { dialog, _ ->
+            dialog.dismiss()
+        }
+        val d = alert.create()
+        d.show()
+    }
+
+    private fun startFlutterWave(coinPlan: CoinPlan, userProfile: UserProfile, currency: String){
         RaveUiManager(this).setAmount(coinPlan.coin.toDouble())
-            .setCurrency("NGN")
+            .setCurrency(currency)
             .setEmail(userProfile.email)
             .setfName("HowFar user")
             .setlName(userProfile.name)

@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.SoundPool
 import android.os.Build
@@ -19,7 +20,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
@@ -37,7 +37,7 @@ import com.azur.howfar.MyFirebaseMessagingService
 import com.azur.howfar.R
 import com.azur.howfar.activity.BaseActivity
 import com.azur.howfar.activity.LoginActivityActivity
-import com.azur.howfar.activity.SpleshActivityLike
+import com.azur.howfar.activity.SplashActivityLike
 import com.azur.howfar.databinding.ActivityChatLandingBinding
 import com.azur.howfar.howfarchat.chat.ActivitySearchChat
 import com.azur.howfar.howfarchat.groupChat.ActivityNewGroup
@@ -47,10 +47,11 @@ import com.azur.howfar.howfarchat.settings.SettingsFragment
 import com.azur.howfar.howfarchat.status.ActivityCreateStatus
 import com.azur.howfar.howfarchat.status.FragmentStatus
 import com.azur.howfar.howfarchat.status.StatusType
-import com.azur.howfar.howfarwallet.ActivityWallet
+import com.azur.howfar.howfarwallet.ActivityFingerPrint
 import com.azur.howfar.livedata.ValueEventLiveData
 import com.azur.howfar.models.BannerData
 import com.azur.howfar.models.EventListenerType.onDataChange
+import com.azur.howfar.models.FingerprintRoute.HOW_FAR_PAY
 import com.azur.howfar.models.PushNotification
 import com.azur.howfar.models.UserProfile
 import com.azur.howfar.services.MsgBroadcast
@@ -64,11 +65,10 @@ import com.azur.howfar.viewmodel.UserProfileViewmodel
 import com.azur.howfar.workManger.HowFarAnalyticsTypes
 import com.azur.howfar.workManger.OpenAppWorkManager
 import com.bumptech.glide.Glide
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.messaging.ktx.messaging
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -237,7 +237,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
         askNotificationPermission()
         subscribeToTopics()
         activeUserAnalytics()
-        bannerDisplay()
+        //bannerDisplay()
         binding.navDayNight.setOnClickListener(this)
         //startAlarm()
         initSoundPool()
@@ -315,7 +315,6 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
             binding.coinRoot.visibility = View.GONE
             if (isChecked) binding.cashRoot.visibility = View.VISIBLE else binding.coinRoot.visibility = View.VISIBLE
         }
-
         binding.chattingLandingViewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
                 super.onPageScrolled(position, positionOffset, positionOffsetPixels)
@@ -382,7 +381,6 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
     }
 
     override fun onPause() {
-        if (giftDialog != null) giftDialog!!.dismiss()
         if (permissionDialog != null) permissionDialog!!.dismiss()
         super.onPause()
     }
@@ -401,13 +399,13 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
 
     override fun onResume() {
         super.onResume()
-        //showCustomToast(viewRoot = binding.root)
-        binding.cashRoot.visibility = View.VISIBLE
-        binding.coinRoot.visibility = View.GONE
-        binding.coinCashSwitch.isChecked = false
+        //binding.cashRoot.visibility = View.VISIBLE
+        //binding.coinRoot.visibility = View.GONE
+        //binding.coinCashSwitch.isChecked = false
 
+        val color = MaterialColors.getColor(this, android.R.attr.colorPrimary, Color.BLACK)
+        window.statusBarColor = color
         pref.edit().putInt(getString(R.string.in_chat_phone_key), 0).apply()
-        //window.statusBarColor = Color.parseColor("#1101A9")
         FirebaseAuth.getInstance().addAuthStateListener { p0 ->
             if (p0.currentUser == null) {
                 val intent = Intent(this@ChatLanding, LoginActivityActivity::class.java)
@@ -442,7 +440,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 balanceSwitch = !balanceSwitch
                 if (balanceSwitch) {
                     binding.eyeSwitch.rotation = 180F
-                    binding.moneyRoot.visibility = View.GONE
+                    //binding.moneyRoot.visibility = View.GONE
                     binding.chattingLandingFadedImage.updateLayoutParams {
                         width = 180
                         height = 90
@@ -452,7 +450,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                     }
                 } else {
                     binding.eyeSwitch.rotation = 360F
-                    binding.moneyRoot.visibility = View.VISIBLE
+                    //binding.moneyRoot.visibility = View.VISIBLE
                     binding.chattingLandingFadedImage.updateLayoutParams {
                         width = 180
                         height = 160
@@ -463,7 +461,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 }
             }
             R.id.nav_like -> {
-                startActivity(Intent(this, SpleshActivityLike::class.java))
+                startActivity(Intent(this, SplashActivityLike::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
                 drawer()
             }
@@ -472,7 +470,7 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 drawer()
             }
             R.id.nav_pay -> {
-                startActivity(Intent(this, ActivityWallet::class.java))
+                startActivity(Intent(this, ActivityFingerPrint::class.java).putExtra("data", HOW_FAR_PAY))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
                 drawer()
             }
@@ -523,15 +521,14 @@ class ChatLanding : BaseActivity(), View.OnClickListener {
                 }
                 AppCompatDelegate.setDefaultNightMode(if (!isNight) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO)
             }
-
             R.id.chat_chat -> {
             }
             R.id.chat_like -> {
-                startActivity(Intent(this, SpleshActivityLike::class.java))
+                startActivity(Intent(this, SplashActivityLike::class.java))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
             }
             R.id.chat_pay -> {
-                startActivity(Intent(this, ActivityWallet::class.java))
+                startActivity(Intent(this, ActivityFingerPrint::class.java).putExtra("data", HOW_FAR_PAY))
                 overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
             }
             R.id.chat_setting -> {

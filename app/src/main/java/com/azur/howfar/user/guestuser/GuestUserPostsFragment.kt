@@ -244,7 +244,7 @@ class GuestPostsAdapter : RecyclerView.Adapter<GuestPostsAdapter.ViewHolder>() {
                                     likeButton.setImageResource(R.drawable.like_white)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
+                                else -> HFCoinUtils.sendLoveLikeHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
                             }
                         } else {
                             tvLikes.text =  originalLike
@@ -275,7 +275,7 @@ class GuestPostsAdapter : RecyclerView.Adapter<GuestPostsAdapter.ViewHolder>() {
                                     lovesButton.setImageResource(com.like.view.R.drawable.heart_off)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
+                                else -> HFCoinUtils.sendLoveLikeHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
                             }
                         } else {
                             tvLoves.text = originalLove

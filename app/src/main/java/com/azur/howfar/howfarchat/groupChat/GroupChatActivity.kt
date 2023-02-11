@@ -803,7 +803,7 @@ class GroupAttachmentFragment : BottomSheetDialogFragment(), View.OnClickListene
             val name = lastPathSegment.substring(lastPathSegment.lastIndexOf("/") + 1)
             imageDialogViewModel.setImageName(name)
             imageDialogViewModel.setImageUri(uriContent)
-            requireActivity().supportFragmentManager.beginTransaction().replace(R.id.chat_root, ImageDialogFragment()).commit()
+            requireActivity().supportFragmentManager.beginTransaction().replace(R.id.group_chat_root, ImageDialogFragment()).commit()
             this.dismiss()
         } else {
             val exception = result.error

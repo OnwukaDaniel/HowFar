@@ -15,18 +15,21 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.azur.howfar.activity.MainActivity
+import com.azur.howfar.models.ChatData
+import com.azur.howfar.notification.AppNotificationManager
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.google.firebase.messaging.ktx.messaging
+import com.google.gson.Gson
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+    val notifierHelper = AppNotificationManager(this)
 
     override fun onStart(intent: Intent?, startId: Int) {
         super.onStart(intent, startId)
         subscribeToTopic("HowFar", baseContext)
     }
-
 
     // [START receive_message]
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -36,7 +39,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         // Check if message contains a data payload.
         if (remoteMessage.data.isNotEmpty()) {
-            Log.d(TAG, "Message data payload: ${remoteMessage.data}")
+            val json = remoteMessage.data["chat"]
+            val messageType = remoteMessage.data["view"]
+            val data = Gson().fromJson(json, ChatData::class.java)
+            Log.d(TAG, "Message messageType: ******************** $messageType")
+            notifierHelper.listenForMessage(data)
+            when (messageType) {
+                "Message" -> {
+                    Log.d(TAG, "Message data payload: ******************** $data")
+                }
+            }
 
             if (/* Check if data needs to be processed by long running job */ false) {
                 // For long-running tasks (10 seconds or more) use WorkManager.
@@ -95,8 +107,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun sendNotification(messageBody: String) {
         val intent = Intent(this, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        val pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
-            PendingIntent.FLAG_IMMUTABLE)
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0 /* Request code */, intent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
 
         val channelId = "fcm_default_channel"
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
@@ -111,9 +125,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         // Since android Oreo notification channel is needed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId,
+            val channel = NotificationChannel(
+                channelId,
                 "Channel human readable title",
-                NotificationManager.IMPORTANCE_DEFAULT)
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
             notificationManager.createNotificationChannel(channel)
         }
 

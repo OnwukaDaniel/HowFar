@@ -26,6 +26,7 @@ import com.azur.howfar.howfarchat.status.StatusType.IMAGE
 import com.azur.howfar.howfarchat.status.StatusType.TEXT
 import com.azur.howfar.models.StatusUpdateData
 import com.azur.howfar.models.StatusUpdateType
+import com.azur.howfar.utils.CanHubImage
 import com.azur.howfar.utils.ImageCompressor
 import com.azur.howfar.utils.Util
 import com.azur.howfar.utils.progressbar.Spinner
@@ -52,35 +53,35 @@ class ActivityCreateStatus : BaseActivity(), View.OnClickListener {
     private val workManager = WorkManager.getInstance(this)
     private var pair: Pair<ByteArrayInputStream, ByteArray>? = null
     private var contacts: ArrayList<Contact> = arrayListOf()
-    private var imageCapture: ImageCapture? = null
+    private lateinit var canhub :CanHubImage
     private val colors = arrayListOf("#25D265", "#660099", "#FFE595", "#FEAD2A", "#E7166B", "#C10451", "#660099", "#95FF00", "#669900", "#33000000", "#757575")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
         askPermission()
+        canhub = CanHubImage(this)
         binding.imageSend.setOnClickListener(this)
         pref = getSharedPreferences(getString(R.string.ALL_PREFERENCE), Context.MODE_PRIVATE)
         when (intent.getIntExtra("type", TEXT)) {
             TEXT -> showTextRoot()
-            IMAGE -> openImagePick()
+            IMAGE -> canhub.openCanHub(cropImage, "Story")
         }
         binding.textSend.setOnClickListener {
             val spinner = Spinner()
             val status = binding.textStatus.text.toString().trim()
             if (binding.textStatus.text.isEmpty()) return@setOnClickListener
             supportFragmentManager.beginTransaction().replace(R.id.create_status_root, spinner)
-            val timeNow = Calendar.getInstance().timeInMillis.toString()
             val data = StatusUpdateData(
                 caption = status,
                 senderUid = myAuth,
                 statusType = StatusUpdateType.TEXT,
-                timeSent = timeNow,
+                timeSent = Calendar.getInstance().timeInMillis.toString(),
                 captionBackgroundColor = colors.first()
             )
             initializeSendStatus(data)
         }
-        binding.selectImage.setOnClickListener { openImagePick() }
+        binding.selectImage.setOnClickListener { canhub.openCanHub(cropImage, "Story")}
         binding.takePicture.setOnClickListener {
             supportFragmentManager.beginTransaction().replace(R.id.create_status_root, FragmentCreateStatusMedia()).commit()
         }
@@ -151,24 +152,6 @@ class ActivityCreateStatus : BaseActivity(), View.OnClickListener {
         binding.displayImageRoot.visibility = View.VISIBLE
     }
 
-    private fun openImagePick() {
-        if (Util.permissionsAvailable(permissionsStorage, this)) {
-            cropImage.launch(
-                options {
-                    this.setActivityTitle("Status image")
-                    this.setAllowFlipping(true)
-                    this.setAllowRotation(true)
-                    this.setAutoZoomEnabled(true)
-                    setCropMenuCropButtonTitle("Done")
-                    this.setImageSource(includeGallery = true, includeCamera = true)
-                    setGuidelines(CropImageView.Guidelines.ON)
-                }
-            )
-        } else {
-            ActivityCompat.requestPermissions(this, permissionsStorage, 36)
-        }
-    }
-
     private val cropImage = registerForActivityResult(CropImageContract()) { result ->
         if (result.isSuccessful) {
             val uriContent = result.uriContent!!
@@ -203,5 +186,5 @@ class ActivityCreateStatus : BaseActivity(), View.OnClickListener {
 object StatusType {
     const val TEXT = 0
     const val IMAGE = 1
-    const val VIDEO = 1
+    const val VIDEO = 2
 }

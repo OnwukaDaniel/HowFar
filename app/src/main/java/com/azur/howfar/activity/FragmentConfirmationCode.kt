@@ -3,8 +3,8 @@ package com.azur.howfar.activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,8 +32,6 @@ import com.google.firebase.FirebaseException
 import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.messaging.ktx.messaging
 import com.google.firebase.storage.FirebaseStorage
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
@@ -51,11 +49,10 @@ class FragmentConfirmationCode : Fragment(), View.OnClickListener {
     private val signUpViewModel: SignUpViewModel by activityViewModels()
     private val auth = FirebaseAuth.getInstance()
     private var storedVerificationId = ""
-    private var imageStream: Pair<ByteArrayInputStream, ByteArray>? = null
+    private var imageUri: String = ""
     private lateinit var pref: SharedPreferences
     private var resendToken: PhoneAuthProvider.ForceResendingToken? = null
     private var ref = FirebaseDatabase.getInstance().reference
-    private var startedCounting = false
     private var userSignUp = UserSignUp()
     private lateinit var workManager: WorkManager
 
@@ -71,7 +68,7 @@ class FragmentConfirmationCode : Fragment(), View.OnClickListener {
             }
         }
         signUpViewModel.three.observe(viewLifecycleOwner) {
-            imageStream = it.stream
+            imageUri = it.uri
         }
         binding.verifyCountDown.setOnClickListener(this)
         binding.verifyBtn.setOnClickListener(this)
@@ -108,25 +105,12 @@ class FragmentConfirmationCode : Fragment(), View.OnClickListener {
         ref = ref.child("user_details").child(uid)
         ref.setValue(u).addOnSuccessListener {
             pref.edit().putString(getString(R.string.this_user), Gson().toJson(u)).apply()
-            subscribeToTopic(uid)
             val intent = Intent(requireContext(), ChatLanding::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
 
             startActivity(intent)
             requireActivity().overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
         }.addOnFailureListener { errorToast("Error Occurred, Try Again") }
-    }
-
-    private fun subscribeToTopic(topic : String) {
-        Firebase.messaging.subscribeToTopic(topic)
-            .addOnCompleteListener { task ->
-                var msg = "Subscribed"
-                if (!task.isSuccessful) {
-                    msg = "Subscribe failed"
-                }
-                Log.d("TopicSubscription", msg)
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            }
     }
 
     private fun activeUserAnalytics() {
@@ -161,7 +145,7 @@ class FragmentConfirmationCode : Fragment(), View.OnClickListener {
 
         val imageRef =
             FirebaseStorage.getInstance().reference.child(EditProfileActivity.PROFILE_IMAGE).child(FirebaseAuth.getInstance().currentUser!!.uid).child(timeSent)
-        val uploadTask = imageRef.putStream(imageStream!!.first)
+        val uploadTask = imageRef.putFile(Uri.parse(imageUri))
         uploadTask.continueWith { task ->
             if (!task.isSuccessful) task.exception?.let { itId ->
                 requireActivity().supportFragmentManager.beginTransaction().remove(fragmentDialog).commit()

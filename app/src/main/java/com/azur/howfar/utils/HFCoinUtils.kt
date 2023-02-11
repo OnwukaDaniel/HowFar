@@ -25,7 +25,7 @@ object HFCoinUtils {
         return available
     }
 
-    fun sendHFCoin(amount: Float, othersRef: DatabaseReference, creatorUid: String, myProfile: UserProfile, time: String) {
+    fun sendLoveLikeHFCoin(amount: Float, othersRef: DatabaseReference, creatorUid: String, myProfile: UserProfile, time: String) {
         var currency = Currency(senderUid = myProfile.uid, receiverUid = creatorUid, transactionType = TransactionType.SENT, hfcoin = amount)
         var md = when (amount) {
             Const.LIKE_VALUE -> MomentDetails(
@@ -49,6 +49,33 @@ object HFCoinUtils {
                         currency.transactionType = TransactionType.EARNED
                         receiverRef.setValue(currency)
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Send HFCoin as a transaction.
+     * Transaction will be posted to
+     * reference.child(TRANSFER_HISTORY).child(UID).child(timeSent)
+     * @param amountDebit: Float (Required)
+     * @param amountCredit: Float (Required)
+     * @param receiverUid: String (Required)
+     * @param senderUid: String (Required)
+     * */
+    fun send(amountDebit: Float, amountCredit: Float, receiverUid: String, senderUid: String) {
+        var currency = Currency(senderUid = senderUid, receiverUid = receiverUid, transactionType = TransactionType.SENT, hfcoin = amountDebit)
+        val timeRef = FirebaseDatabase.getInstance().reference.child("time").child(senderUid)
+        timeRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
+            timeRef.get().addOnSuccessListener { timeSnapshot ->
+                val timeSent = timeSnapshot.value.toString()
+                currency.timeOfTransaction = timeSent
+                val senderRef = FirebaseDatabase.getInstance().reference.child(TRANSFER_HISTORY).child(senderUid).child(timeSent)
+                val receiverRef = FirebaseDatabase.getInstance().reference.child(TRANSFER_HISTORY).child(receiverUid).child(timeSent)
+                senderRef.setValue(currency).addOnSuccessListener {
+                    currency.transactionType = TransactionType.RECEIVED
+                    currency.hfcoin = amountCredit
+                    receiverRef.setValue(currency)
                 }
             }
         }

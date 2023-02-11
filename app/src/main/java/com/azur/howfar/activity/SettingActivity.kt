@@ -14,14 +14,13 @@ class SettingActivity : BaseActivity() {
         setContentView(binding.root)
         binding.logOut.setOnClickListener {
             Firebase.auth.signOut()
-            val intent = Intent(this, LoginActivityActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-            startActivity(intent)
+            startActivity(Intent(this, LoginActivityActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
+            })
             overridePendingTransition(R.anim.enter_left_to_right, R.anim.exit_left_to_right)
         }
         binding.contactUs.setOnClickListener {
-            val intent = Intent(this, ContactUsActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, ContactUsActivity::class.java))
             overridePendingTransition(R.anim.enter_left_to_right, R.anim.exit_left_to_right)
         }
     }

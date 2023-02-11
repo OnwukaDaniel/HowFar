@@ -84,6 +84,7 @@ class FeedLatestFragment : Fragment(), OnPostClickListener {
                     val post = it.first.getValue(Moment::class.java)!!
                     if (post !in posts) {
                         posts.add(post)
+                        posts.sortWith(compareByDescending { d-> d.timePosted })
                         feedAdapter.notifyItemInserted(posts.size)
                         binding.feedProgress.visibility = View.GONE
                     }
@@ -121,7 +122,7 @@ class FeedLatestFragment : Fragment(), OnPostClickListener {
         feedAdapter.viewLifecycleOwner = viewLifecycleOwner
         feedAdapter.dataset = posts
         feedAdapter.uploadPostSpecialViewModel = uploadPostSpecialViewModel
-        binding.rvFeed.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, true)
+        binding.rvFeed.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
         binding.rvFeed.scrollToPosition(posts.size)
         binding.rvFeed.adapter = feedAdapter
         feedAdapter.onPostClickListener = this
@@ -282,7 +283,7 @@ class NormalFeedAdapter : RecyclerView.Adapter<NormalFeedAdapter.FeedViewHolder>
                                     holder.likeButton.setImageResource(R.drawable.like_white)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendHFCoin(LIKE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
+                                else -> HFCoinUtils.sendLoveLikeHFCoin(LIKE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
                             }
                         } else {
                             holder.tvLikes.text = originalLike
@@ -310,7 +311,7 @@ class NormalFeedAdapter : RecyclerView.Adapter<NormalFeedAdapter.FeedViewHolder>
                                     holder.lovesButton.setImageResource(com.like.view.R.drawable.heart_off)
                                     Toast.makeText(context, "Insufficient HFCoin.", Toast.LENGTH_SHORT).show()
                                 }
-                                else -> HFCoinUtils.sendHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
+                                else -> HFCoinUtils.sendLoveLikeHFCoin(LOVE_VALUE, othersRef, datum.creatorUid, myProfile = myProfile, datum.timePosted)
                             }
                         } else {
                             holder.tvLoves.text = originalLove

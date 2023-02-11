@@ -15,7 +15,7 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -120,9 +120,9 @@ class FragmentStatus : Fragment(), View.OnClickListener, StatusDataTransferHelpe
                                     for (d in all_snap.first.children) {
                                         var tempStatus: ArrayList<StatusUpdateData> = arrayListOf()
                                         for (status in d.children) {
-                                            val data = Gson().fromJson(Gson().toJson(status.value), StatusUpdateData::class.java)
-                                            if(!recurseTimeCalculator(data)){
-                                                if (Util.formatNumber(data.senderPhone) !in contactFormattedList) continue
+                                            val data = status.getValue(StatusUpdateData::class.java)!!
+                                            if (!recurseTimeCalculator(data)) {
+                                                if (Util.formatNumber(data.senderPhone) !in contactFormattedList && !data.isAdmin) continue
                                                 tempStatus.add(data)
                                             }
                                         }
@@ -170,8 +170,8 @@ class FragmentStatus : Fragment(), View.OnClickListener, StatusDataTransferHelpe
         pref = requireActivity().getSharedPreferences(getString(R.string.ALL_PREFERENCE), Context.MODE_PRIVATE)
         binding = FragmentStatusBinding.inflate(inflater, container, false)
         timeRef = timeRef.child("time").child(myAuth)
-        myStatusRef = myStatusRef.child("status_update").child("my_status").child(myAuth)
-        allyStatusRef = allyStatusRef.child("status_update").child("other_status").child(myAuth)
+        myStatusRef = myStatusRef.child(STATUS_UPDATE).child(MY_STATUS).child(myAuth)
+        allyStatusRef = allyStatusRef.child(STATUS_UPDATE).child(OTHER_STATUS).child(myAuth)
         permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
 
         binding.statusFabText.setOnClickListener(this)
@@ -321,7 +321,7 @@ class StatusAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         val time: TextView = itemView.findViewById(R.id.my_status_time)
         val textStatusBackground: ShapeableImageView = itemView.findViewById(R.id.status_display_text_background)
         val textStatus: TextView = itemView.findViewById(R.id.status_display_text)
-        val statusTextRoot: LinearLayout = itemView.findViewById(R.id.status_text_root)
+        val blueTick: ImageView = itemView.findViewById(R.id.blue_tick)
     }
 
     class ImageOnlyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -329,6 +329,7 @@ class StatusAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         val portions: com.devlomi.circularstatusview.CircularStatusView = itemView.findViewById(R.id.circular_status_view)
         val textStatusBackground: ShapeableImageView = itemView.findViewById(R.id.status_display_text_background)
         val textStatus: TextView = itemView.findViewById(R.id.status_display_text)
+        val blueTick: ImageView = itemView.findViewById(R.id.blue_tick)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -344,13 +345,15 @@ class StatusAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         if (showText) {
             holder as ViewHolder
             setLastStatus(datum, holder)
-            val senderRef = FirebaseDatabase.getInstance().reference.child("user_details").child(datum.first().senderUid)
-            val liveData = ValueEventLiveData(senderRef)
-            liveData.observe(livecycleOwner) {
-                when (it.second) {
-                    onDataChange -> {
-                        val user = it.first.getValue(UserProfile::class.java)!!
-                        holder.name.text = user.name
+            if (!datum.first().isAdmin) {
+                val senderRef = FirebaseDatabase.getInstance().reference.child("user_details").child(datum.first().senderUid)
+                val liveData = ValueEventLiveData(senderRef)
+                liveData.observe(livecycleOwner) {
+                    when (it.second) {
+                        onDataChange -> {
+                            val user = it.first.getValue(UserProfile::class.java)!!
+                            holder.name.text = user.name
+                        }
                     }
                 }
             }
@@ -373,6 +376,13 @@ class StatusAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     private fun setLastStatus(datum: ArrayList<StatusUpdateData>, holder: ViewHolder) {
+        when (datum.first().isAdmin) {
+            true -> holder.blueTick.visibility = View.VISIBLE
+            false -> holder.blueTick.visibility = View.GONE
+        }
+        when (datum.last().isAdmin) {
+            true -> holder.name.text = "HowFar"
+        }
         when (datum.last().statusType) {
             IMAGE -> {
                 holder.textStatus.visibility = View.GONE
@@ -404,6 +414,10 @@ class StatusAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     private fun setImageOnlyLastStatus(datum: ArrayList<StatusUpdateData>, holder: ImageOnlyViewHolder) {
+        when (datum.first().isAdmin) {
+            true -> holder.blueTick.visibility = View.VISIBLE
+            false -> holder.blueTick.visibility = View.GONE
+        }
         when (datum.last().statusType) {
             IMAGE -> {
                 holder.textStatus.visibility = View.GONE

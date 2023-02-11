@@ -31,5 +31,6 @@
     <string name="moment_data">moment_data</string>
     <string name="support_data">support_data</string>
     <string name="default_notification_channel_id">Messages</string>
+    <string name="wallet_secret_key">wallet_secret_key</string>
 
 </resources>

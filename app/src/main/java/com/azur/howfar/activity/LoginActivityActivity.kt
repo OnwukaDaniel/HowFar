@@ -1,6 +1,7 @@
 package com.azur.howfar.activity
 
 import android.content.DialogInterface
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -49,7 +50,7 @@ class LoginActivityActivity : AppCompatActivity(), View.OnClickListener {
         R.drawable.image2,
         R.drawable.image3,
     )
-    private var imageStream: Pair<ByteArrayInputStream, ByteArray>? = null
+    private var imageUri: Uri = Uri.EMPTY
     private val signUpViewModel: SignUpViewModel by viewModels()
     private var textFragments = arrayListOf<Fragment>()
     private var handler = Handler(Looper.getMainLooper())
@@ -147,7 +148,7 @@ class LoginActivityActivity : AppCompatActivity(), View.OnClickListener {
             //val uriFilePath = result.getUriFilePath(this) // optional usage
             try {
                 val pair: Pair<ByteArrayInputStream, ByteArray> = ImageCompressor.compressImage(uriContent, this, null)
-                imageStream = pair
+                imageUri = uriContent
                 Glide.with(this).load(pair.second).circleCrop().into(sheetDialogBinding.addImage)
             } catch (e: Exception) {
                 println("Exception *********************************************************** ${e.printStackTrace()}")
@@ -174,11 +175,11 @@ class LoginActivityActivity : AppCompatActivity(), View.OnClickListener {
                     Toast.makeText(this, "Select Gender First", Toast.LENGTH_SHORT).show()
                     return
                 }
-                if (imageStream == null) {
+                if (imageUri == null) {
                     Toast.makeText(this, "Select Image First", Toast.LENGTH_SHORT).show()
                     return
                 }
-                val three = ThreeSignUpData(name = name, gender = selected, stream = imageStream!!)
+                val three = ThreeSignUpData(name = name, gender = selected, uri = imageUri.toString())
                 signUpViewModel.setThreeInput(three)
                 supportFragmentManager.beginTransaction().addToBackStack("phone").replace(R.id.login_root, FragmentVerifyPhone()).commit()
                 bottomSheetDialog.dismiss()
@@ -216,7 +217,6 @@ class TextFragment : Fragment() {
 
 data class ThreeSignUpData(
     var name: String = "",
-    var stream: Pair<ByteArrayInputStream, ByteArray>,
     var gender: String = "",
     var uri: String = "",
 )

@@ -24,6 +24,7 @@
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_10dp_stockgray2.xml" value="0.232" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_20dp.xml" value="0.1875" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_50dp.xml" value="0.1875" />
+        <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_bottom_sheet.xml" value="0.2015" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_chat_right.xml" value="0.232" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_round_dark_pink.xml" value="0.179" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/drawable/bg_round_pink.xml" value="0.2145" />
@@ -247,7 +248,7 @@
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_payment_input.xml" value="0.25" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_post_view_comment.xml" value="0.25" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_profile.xml" value="0.25" />
-        <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_rcoin.xml" value="0.25" />
+        <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_rcoin.xml" value="0.22" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_recharge.xml" value="0.22552083333333334" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_security.xml" value="0.22552083333333334" />
         <entry key="..\:/Users/HP/AndroidStudioProjects/HF/HowFar/app/src/main/res/layout/fragment_send_confirmation.xml" value="0.22" />

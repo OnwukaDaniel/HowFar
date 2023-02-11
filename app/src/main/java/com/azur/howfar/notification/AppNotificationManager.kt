@@ -5,10 +5,21 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
+import androidx.core.app.RemoteInput
 import com.azur.howfar.R
+import com.azur.howfar.broadcasts.DirectReceiver
+import com.azur.howfar.howfarchat.chat.ChatActivity2
+import com.azur.howfar.jobservice.PersonCustom
+import com.azur.howfar.models.ChatData
+import com.azur.howfar.models.ParticipantTempData
+import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.Gson
+import java.util.ArrayList
 
 class AppNotificationManager(private val context: Context) {
     /**
@@ -61,5 +72,110 @@ class AppNotificationManager(private val context: Context) {
         with(NotificationManagerCompat.from(context)) {
             notify(notificationIndex, notification.build())
         }
+    }
+
+    fun listenForMessage(chatData: ChatData){
+        var notificationIndex = 1000
+        FirebaseAuth.getInstance().currentUser ?: return
+        val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
+        var priority = NotificationCompat.PRIORITY_HIGH
+        val person = Person.Builder()
+            .setName(participantByUid(chatData, chatData.senderuid).tempName)
+            .setUri(participantByUid(chatData, chatData.senderuid).tempImage)
+            .build()
+        var msgStyle = NotificationCompat.MessagingStyle(person).setGroupConversation(true)
+            .setConversationTitle("Chat with ${otherParticipant(chatData).tempName}")
+
+        val p1 = participantByUid(chatData, myAuth).phone.takeLast(4)
+        val p2 = participantByUid(chatData, myAuth).phone.takeLast(4)
+        val numberIndexList = arrayListOf(p1, p2)
+        var notCounter = ""
+        numberIndexList.sortedWith(compareByDescending { it }).forEach { notCounter += it }
+        notificationIndex = notCounter.toInt()
+        val oldStyle = restoreMessagingStyle(context, notificationIndex)
+        val oldStyleCopy = restoreMessagingStyle(context, notificationIndex)
+
+        val personMe = Person.Builder()
+            .setName(participantByUid(chatData, chatData.senderuid).tempName)
+            .setUri(participantByUid(chatData, chatData.senderuid).tempImage)
+            .build()
+        val conversation = NotificationCompat.MessagingStyle.Message(chatData.msg, chatData.uniqueQuerableTime.toLong(), personMe)
+        val personCustomNew = PersonCustom(
+            name = conversation.person!!.name.toString(), time = conversation.timestamp.toString(),
+            image = conversation.person!!.uri!!, msg = conversation.text.toString()
+        )
+
+        if (oldStyle != null) {
+            priority = NotificationCompat.PRIORITY_DEFAULT
+            val oldCustomData = arrayListOf<PersonCustom>()
+            for (i in oldStyle.messages) {
+                val personCustom = PersonCustom(
+                    name = i.person!!.name.toString(), time = i.timestamp.toString(),
+                    image = i.person!!.uri!!, msg = i.text.toString()
+                )
+                oldCustomData.add(personCustom)
+            }
+            if (personCustomNew !in oldCustomData) oldStyle.messages.add(conversation)
+            msgStyle = oldStyle
+        } else msgStyle.addMessage(conversation)
+
+        val activityIntent = Intent(context, ChatActivity2::class.java).apply {
+            putExtra("data", otherParticipant(chatData.participants))
+        }
+        val activityPendingIntent =
+            PendingIntent.getActivity(context, 0, activityIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val remoteInput: RemoteInput = RemoteInput.Builder(chatData.uniqueQuerableTime).run {
+            setLabel("Your reply")
+            build()
+        }
+        val replyIntent = Intent(context, DirectReceiver::class.java).apply {
+            val json = Gson().toJson(chatData)
+            putExtra("index", notificationIndex)
+            putExtra("json", json)
+        }
+        var replyPendingIntent = PendingIntent.getBroadcast(context, notificationIndex, replyIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+        val actionReply = NotificationCompat.Action
+            .Builder(R.drawable.app_logo_round, "Reply", replyPendingIntent)
+            .addRemoteInput(remoteInput)
+            .setAllowGeneratedReplies(true)
+            .build()
+        val notification = NotificationCompat.Builder(context, "Messages")
+            .setSmallIcon(R.drawable.app_icon_sec)
+            .setStyle(msgStyle)
+            .setColor(Color.BLUE)
+            .setContentIntent(activityPendingIntent)
+            .setAutoCancel(true)
+            .addAction(actionReply)
+            .setPriority(priority)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(notificationIndex, notification.build())
+        }
+    }
+
+    private fun restoreMessagingStyle(context: Context, notificationId: Int): NotificationCompat.MessagingStyle? {
+        return (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .activeNotifications
+            .find { it.id == notificationId }
+            ?.notification
+            ?.let { NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(it) }
+    }
+
+    private fun otherParticipant(participants: ArrayList<String>): String {
+        val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
+        for (i in participants) return if (i != myAuth) i else participants[1]
+        return ""
+    }
+
+    private fun otherParticipant(chatUser: ChatData): ParticipantTempData {
+        val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
+        for (i in chatUser.participantsTempData) if (i.uid != myAuth) return i
+        return ParticipantTempData()
+    }
+
+    private fun participantByUid(chatUser: ChatData, uid: String): ParticipantTempData {
+        val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
+        for (i in chatUser.participantsTempData) if (i.uid == uid) return i
+        return ParticipantTempData()
     }
 }

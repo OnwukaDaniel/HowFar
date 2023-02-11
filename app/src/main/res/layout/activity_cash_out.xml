@@ -81,6 +81,23 @@
             </LinearLayout>
 
             <EditText
+                android:id="@+id/etAccountName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginHorizontal="30dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_10dp_stockwhite"
+                android:gravity="center"
+                android:hint="Account Name"
+                android:maxLines="1"
+                android:paddingHorizontal="80dp"
+                android:paddingVertical="10dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/text_gray"
+                android:textSize="16dp" />
+
+            <EditText
                 android:id="@+id/etAmount"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

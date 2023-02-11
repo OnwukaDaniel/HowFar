@@ -68,6 +68,7 @@ class ActivityNewGroup : BaseActivity(), ContactSelectHelper, View.OnClickListen
                         val pair = getAllSavedContacts(this@ActivityNewGroup)
                         contacts = pair.first
                         phoneList = pair.second
+                        println("Output ******************************** $contacts")
                         allUsersRef.get().addOnSuccessListener {
                             if (it.exists()) {
                                 hideProgressBar()
@@ -99,7 +100,7 @@ class ActivityNewGroup : BaseActivity(), ContactSelectHelper, View.OnClickListen
 
     private fun askPermission() {
         if (!Util.permissionsAvailable(arrayOf(Manifest.permission.READ_CONTACTS), this))
-            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS) else permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
 
     @SuppressLint("NotifyDataSetChanged")
@@ -221,7 +222,7 @@ class ContactsAdapter : RecyclerView.Adapter<ContactsAdapter.ViewHolder>() {
         holder.card.setOnClickListener {
             val selectedDatum = dataset[holder.bindingAdapterPosition]
             if (selectedDatum in selectedDataset) {
-                holder.card.setCardBackgroundColor(Color.parseColor("#222222"))
+                holder.card.setCardBackgroundColor(Color.TRANSPARENT)
                 selectedDataset.remove(dataset[holder.bindingAdapterPosition])
                 holder.image.setImageResource(R.drawable.ic_avatar)
                 contactSelectHelper.onDeselect(selectedDataset)

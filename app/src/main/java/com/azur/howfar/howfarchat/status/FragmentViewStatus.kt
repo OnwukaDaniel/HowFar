@@ -6,7 +6,10 @@ import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
 import android.os.Bundle
-import android.view.*
+import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
@@ -59,7 +62,7 @@ class FragmentViewStatus : Fragment(), View.OnLongClickListener {
     private var dataset: ArrayList<StatusUpdateData> = arrayListOf()
     private var scrollAssist = false
     private var isScrolling = false
-    private var isPlayling = false
+    private var isPlaying = false
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -112,14 +115,22 @@ class FragmentViewStatus : Fragment(), View.OnLongClickListener {
                 }
             }
         }
-        val ref = FirebaseDatabase.getInstance().reference.child("user_details").child(dataset.first().senderUid)
-        val profileLiveData = ValueEventLiveData(ref)
-        profileLiveData.observe(viewLifecycleOwner) {
-            when (it.second) {
-                EventListenerType.onDataChange -> {
-                    val profile = it.first.getValue(UserProfile::class.java)!!
-                    if (profile.uid != myAuth) binding.viewUserName.text = profile.name
-                    Glide.with(requireContext()).load(profile.image).centerCrop().into(binding.viewUserImage)
+        when (dataset.first().isAdmin) {
+            true -> {
+                binding.viewUserName.text = "HowFar"
+                Glide.with(requireContext()).load(R.drawable.app_icon_sec).centerCrop().into(binding.viewUserImage)
+            }
+            false -> {
+                val ref = FirebaseDatabase.getInstance().reference.child("user_details").child(dataset.first().senderUid)
+                val profileLiveData = ValueEventLiveData(ref)
+                profileLiveData.observe(viewLifecycleOwner) {
+                    when (it.second) {
+                        EventListenerType.onDataChange -> {
+                            val profile = it.first.getValue(UserProfile::class.java)!!
+                            if (profile.uid != myAuth) binding.viewUserName.text = profile.name
+                            Glide.with(requireContext()).load(profile.image).centerCrop().into(binding.viewUserImage)
+                        }
+                    }
                 }
             }
         }
@@ -192,12 +203,12 @@ class FragmentViewStatus : Fragment(), View.OnLongClickListener {
 
     private fun playStatus() {
         binding.segmentedProgressBar.start()
-        isPlayling = true
+        isPlaying = true
     }
 
     private fun pauseStatus() {
         binding.segmentedProgressBar.pause()
-        isPlayling = false
+        isPlaying = false
     }
 
     inner class ViewStatusTabAdapter(fa: FragmentActivity) : FragmentStateAdapter(fa) {
@@ -212,12 +223,12 @@ class FragmentViewStatus : Fragment(), View.OnLongClickListener {
     override fun onLongClick(v: View?): Boolean {
         when (v?.id) {
             R.id.right_click -> {
-                if (isPlayling) {
+                if (isPlaying) {
                     pauseStatus()
                     binding.rightClick.setOnTouchListener { _, event ->
                         when (event!!.action) {
                             MotionEvent.ACTION_UP -> {
-                                if (!isPlayling) playStatus()
+                                if (!isPlaying) playStatus()
                                 return@setOnTouchListener true
                             }
                             else -> return@setOnTouchListener false
@@ -229,11 +240,6 @@ class FragmentViewStatus : Fragment(), View.OnLongClickListener {
         }
         return false
     }
-}
-
-interface StatusInputListener {
-    fun inputIsVisible()
-    fun inputNotVisible()
 }
 
 class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener, View.OnTouchListener {
@@ -374,13 +380,21 @@ class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener
             timeRef.get().addOnSuccessListener { timeSnapshot ->
                 if (timeSnapshot.exists()) {
                     val timeSent = timeSnapshot.value.toString()
-                    val statusViewsRef = FirebaseDatabase.getInstance().reference
-                        .child(STATUS_VIEWS)
-                        .child(statusUpdateData.senderUid)
-                        .child(statusUpdateData.serverTime)
-                        .child(timeSent)
                     val myStatusView = StatusView(nameTemp = userProfile.name, imageTemp = userProfile.image, uid = userProfile.uid, timeViewed = timeSent)
-                    statusViewsRef.setValue(myStatusView)
+                    when (statusUpdateData.isAdmin) {
+                        true -> {
+                            FirebaseDatabase.getInstance("https://howfar-b24ef.firebaseio.com")
+                                .reference.child(STATUS_DETAILS).child(statusUpdateData.serverTime).setValue(myStatusView)
+                        }
+                        false -> {
+                            val statusViewsRef = FirebaseDatabase.getInstance().reference
+                                .child(STATUS_VIEWS)
+                                .child(statusUpdateData.senderUid)
+                                .child(statusUpdateData.serverTime)
+                                .child(timeSent)
+                            statusViewsRef.setValue(myStatusView)
+                        }
+                    }
                 }
             }
         }
@@ -465,10 +479,14 @@ class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener
                 myProfileRef.get().addOnSuccessListener {
                     if (it.exists()) {
                         val myProfile: UserProfile = it.getValue(UserProfile::class.java)!!
-                        val tempProfile = ParticipantTempData(tempName = myProfile.name, uid = myProfile.uid, tempImage = myProfile.image,
-                        phone = Util.formatNumber(myProfile.phone))
-                        val receiverTemp = ParticipantTempData(tempName = receiverProfile.name, uid = receiverProfile.uid, tempImage = receiverProfile.image,
-                        phone = Util.formatNumber(receiverProfile.phone))
+                        val tempProfile = ParticipantTempData(
+                            tempName = myProfile.name, uid = myProfile.uid, tempImage = myProfile.image,
+                            phone = Util.formatNumber(myProfile.phone)
+                        )
+                        val receiverTemp = ParticipantTempData(
+                            tempName = receiverProfile.name, uid = receiverProfile.uid, tempImage = receiverProfile.image,
+                            phone = Util.formatNumber(receiverProfile.phone)
+                        )
                         myChat.participantsTempData = arrayListOf(tempProfile, receiverTemp)
                         if (myChat.msg.isNotEmpty()) {
                             val howFar1 = "how far"
@@ -488,10 +506,13 @@ class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener
                                     myChat.uniqueQuerableTime = rawTime
                                     myChat.sent = true
                                     myChat.myPhone = myProfile.phone
-                                    val chattingRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(user!!.uid).child(statusUpdateData.senderUid)
-                                    val receiverChattingRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(statusUpdateData.senderUid).child(user!!.uid)
+                                    val chattingRef =
+                                        FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(user!!.uid).child(statusUpdateData.senderUid)
+                                    val receiverChattingRef =
+                                        FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(statusUpdateData.senderUid).child(user!!.uid)
                                     chattingRef.child(myChat.uniqueQuerableTime).setValue(myChat).addOnSuccessListener {
-                                        val blockedRef = FirebaseDatabase.getInstance().reference.child(ChatActivity2.MY_BLOCKED_CONTACTS).child(statusUpdateData.senderUid)
+                                        val blockedRef =
+                                            FirebaseDatabase.getInstance().reference.child(ChatActivity2.MY_BLOCKED_CONTACTS).child(statusUpdateData.senderUid)
                                         blockedRef.get().addOnSuccessListener { blocked ->
                                             val blockedList: ArrayList<String> = arrayListOf()
                                             if (blocked.exists()) {
@@ -587,12 +608,19 @@ class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener
             R.id.statusReplySend -> {
                 val input = binding.chatInput.text.toString().trim()
                 if (input == "") return
-                sendNewMsg(input)
-                binding.chatInput.setText("")
+                when (statusUpdateData.isAdmin) {
+                    false -> {
+                        sendNewMsg(input)
+                        binding.chatInput.setText("")
+                        Snackbar.make(binding.root, "Sending", Snackbar.LENGTH_LONG).show()
+                    }
+                    true -> {
+                        Snackbar.make(binding.root, "This is a promotion", Snackbar.LENGTH_LONG).show()
+                    }
+                }
                 hideKeyboard()
                 binding.statusTextInput.visibility = View.GONE
                 statusViewModel.setPlayCurrentStatus(true)
-                Snackbar.make(binding.root, "Sending", Snackbar.LENGTH_LONG).show()
             }
         }
     }
@@ -628,6 +656,7 @@ class FragmentViews : Fragment(), View.OnClickListener, View.OnLongClickListener
         const val STATUS_VIEWS = "STATUS_VIEWS"
         const val CHAT_REFERENCE = "chat_reference"
         const val TAG = "ModalBottomSheet"
+        const val STATUS_UPDATE = "status_update"
     }
 }
 

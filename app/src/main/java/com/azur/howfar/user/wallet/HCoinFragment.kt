@@ -9,6 +9,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.azur.howfar.R
 import com.azur.howfar.databinding.FragmentRcoinBinding
+import com.azur.howfar.howfarwallet.ActivityFingerPrint
+import com.azur.howfar.models.FingerprintRoute.CASH_OUT_HF_COIN
 import com.azur.howfar.viewmodel.FloatViewModel
 
 class HCoinFragment : Fragment(), View.OnClickListener {
@@ -24,7 +26,10 @@ class HCoinFragment : Fragment(), View.OnClickListener {
 
     private fun initMain() {
         binding.btnTransfer.setOnClickListener(this)
-        binding.btnCashout.setOnClickListener { startActivity(Intent(activity, CashOutActivity::class.java)) }
+        binding.btnCashout.setOnClickListener {
+            startActivity(Intent(requireActivity(), ActivityFingerPrint::class.java).putExtra("data", CASH_OUT_HF_COIN))
+            requireActivity().overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
+        }
     }
 
     override fun onClick(p0: View?) {

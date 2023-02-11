@@ -45,6 +45,10 @@
         android:theme="@style/Theme.HowFar"
         android:usesCleartextTraffic="true">
         <activity
+            android:name=".howfarwallet.ActivityFingerPrint"
+            android:noHistory="true"
+            android:exported="false" />
+        <activity
             android:name=".activity.ContactUsActivity"
             android:exported="false" />
         <activity
@@ -146,6 +150,7 @@
 
         <activity
             android:name=".user.wallet.ActivityHFCoinTransfer"
+            android:theme="@style/Theme.HowFar.Splash"
             android:windowSoftInputMode="stateHidden" />
         <activity android:name=".activity.SpleshActivityLike" />
         <activity
@@ -167,6 +172,10 @@
         <activity android:name=".howfarchat.chat.ActivityCustomizeChat" />
         <activity android:name=".howfarchat.chat.ActivityCustomizeChatWallpaper" />
         <activity android:name=".reels.VideoListActivity" />
+        <activity android:name=".howfarchat.chat.ChatActivitySupport" />
+        <activity android:name=".howfarwallet.SuccessFailureFragment" />
+        <activity android:name=".howfarwallet.SuccessFailure" />
+        <activity android:name=".activity.SplashActivityLike" />
 
         <receiver
             android:name=".broadcasts.DirectReceiver"

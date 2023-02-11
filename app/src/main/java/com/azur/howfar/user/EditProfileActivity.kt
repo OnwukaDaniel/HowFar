@@ -79,7 +79,7 @@ class EditProfileActivity : BaseActivity() {
         pref.edit().putString("profileData", json).apply()
         val workRequest = OneTimeWorkRequestBuilder<ProfilePicsWorkManager>().addTag("profile").build()
         workManager.enqueue(workRequest)
-        onBackPressed()
+        finish()
     }
 
     private fun openImagePick() {

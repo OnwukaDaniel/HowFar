@@ -55,15 +55,16 @@
                 android:layout_height="wrap_content"
                 android:paddingVertical="16dp"
                 android:textColor="?android:textColorPrimary"
-                android:text="Code has been sent to " />
+                android:text="" />
 
             <TextView
                 android:id="@+id/confirmation_display_phone"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingVertical="16dp"
+                android:visibility="gone"
                 android:textColor="?android:textColorPrimary"
-                android:text="+234 90 **** 2222" />
+                android:text="" />
 
         </LinearLayout>
 

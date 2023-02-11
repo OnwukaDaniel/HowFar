@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.azur.howfar.R
 import com.azur.howfar.databinding.FragmentChatsBinding
 import com.azur.howfar.howfarchat.chat.ChatActivity2
+import com.azur.howfar.howfarchat.chat.ChatActivitySupport
 import com.azur.howfar.howfarchat.chat.FragmentDisplayImage
 import com.azur.howfar.models.ChatData
 import com.azur.howfar.models.ParticipantTempData
@@ -37,7 +38,6 @@ class FragmentChats : Fragment() {
     private lateinit var binding: FragmentChatsBinding
     private var dataset: ArrayList<ChatData> = arrayListOf()
     private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
-    private var displayRef = FirebaseDatabase.getInstance().reference
     private var chatRef = FirebaseDatabase.getInstance().reference
     private val booleanViewModel by activityViewModels<BooleanViewModel>()
     private val chatDisplayAdapter = ChatDisplayAdapter()
@@ -69,7 +69,6 @@ class FragmentChats : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragmentChatsBinding.inflate(inflater, container, false)
         chatRef = FirebaseDatabase.getInstance().reference.child(CHAT_REFERENCE).child(myAuth)
-        displayRef = FirebaseDatabase.getInstance().reference.child(CHAT_DISPLAY_DATA).child(myAuth)
         chatRef.addValueEventListener(chatListener)
         chatDisplayAdapter.viewLifecycleOwner = viewLifecycleOwner
         chatDisplayAdapter.activity = requireActivity()
@@ -156,34 +155,45 @@ class ChatDisplayAdapter : RecyclerView.Adapter<ChatDisplayAdapter.ChatDisplayVi
         holder.displayMsg.text = datum.msg
         holder.displayTime.text = Util.formatSmartDateTime(datum.uniqueQuerableTime, short = true)
         val selectionColor = if (datum in selectedChats) Color.parseColor("#A7A7B3") else Color.TRANSPARENT
-        val otherParticipant = otherParticipant(datum.participants)
+        val otherParticipant = when(datum.participants.size){
+            1-> datum.participants.first()
+            2->otherParticipant(datum.participants)
+            else->""
+        }
         holder.setTempData(datum)
-        FirebaseDatabase.getInstance().reference.child(USER_DETAILS).child(otherParticipant).get().addOnSuccessListener {
-            if (it.exists()) {
-                holder.allRoot.setBackgroundColor(selectionColor)
-                mediaType(datum, holder)
-                val user = it.getValue(UserProfile::class.java)!!
 
-                when (user.isAdmin) {
-                    true -> holder.blueTick.visibility = View.VISIBLE
-                    false -> holder.blueTick.visibility = View.GONE
-                }
-                holder.displayName.text = user.name
-                Glide.with(context).load(user.image).centerCrop().error(R.drawable.ic_avatar).into(holder.displayImage)
-                holder.displayImage.setOnClickListener {
-                    val fragment = FragmentDisplayImage()
-                    val bundle = Bundle()
-                    bundle.putString("image", user.image)
-                    fragment.arguments = bundle
-                    (activity as AppCompatActivity).supportFragmentManager.beginTransaction().addToBackStack("image")
-                        .replace(R.id.chat_landing_root, fragment).commit()
+        if (datum.isSupport) {
+            holder.displayName.text = "HowFar-Admin"
+            holder.blueTick.visibility = View.VISIBLE
+            Glide.with(context).load(R.drawable.app_icon_sec).centerCrop().into(holder.displayImage)
+        } else {
+            holder.blueTick.visibility = View.GONE
+            FirebaseDatabase.getInstance().reference.child(USER_DETAILS).child(otherParticipant).get().addOnSuccessListener {
+                if (it.exists()) {
+                    holder.allRoot.setBackgroundColor(selectionColor)
+                    mediaType(datum, holder)
+                    val user = it.getValue(UserProfile::class.java)!!
+
+                    when (user.isAdmin) {
+                        true -> holder.blueTick.visibility = View.VISIBLE
+                        false -> holder.blueTick.visibility = View.GONE
+                    }
+                    holder.displayName.text = user.name
+                    Glide.with(context).load(user.image).centerCrop().error(R.drawable.ic_avatar).into(holder.displayImage)
+                    holder.displayImage.setOnClickListener {
+                        val fragment = FragmentDisplayImage()
+                        val bundle = Bundle()
+                        bundle.putString("image", user.image)
+                        fragment.arguments = bundle
+                        (activity as AppCompatActivity).supportFragmentManager.beginTransaction().addToBackStack("image")
+                            .replace(R.id.chat_landing_root, fragment).commit()
+                    }
                 }
             }
         }
 
         val statusBarColor = activity.window.statusBarColor
         val actionContextModeCallback: ActionMode.Callback = object : ActionMode.Callback {
-
             override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {
                 mode!!.menuInflater.inflate(R.menu.chats_action_mode_menu, menu)
                 mode.title = "Select"
@@ -232,9 +242,10 @@ class ChatDisplayAdapter : RecyclerView.Adapter<ChatDisplayAdapter.ChatDisplayVi
                 notifyDataSetChanged()
                 return@setOnClickListener
             }
-            val intent = Intent(context, ChatActivity2::class.java)
-            intent.putExtra("data", otherParticipant)
-            context.startActivity(intent)
+            when (datum.isSupport) {
+                true -> context.startActivity(Intent(context, ChatActivitySupport::class.java))
+                else -> context.startActivity(Intent(context, ChatActivity2::class.java).apply { putExtra("data", otherParticipant) })
+            }
             activity.overridePendingTransition(R.anim.enter_right_to_left, R.anim.exit_right_to_left)
         }
         holder.itemView.setOnLongClickListener {

@@ -21,6 +21,7 @@
         <item name="cardBackgroundColor">?attr/colorSurface</item>
         <item name="android:fontFamily">@font/open_sans</item>
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
+        <item name="colorPrimaryDark">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
         <item name="android:listPreferredItemPaddingLeft">20dp</item>
         <item name="android:listPreferredItemPaddingRight">20dp</item>

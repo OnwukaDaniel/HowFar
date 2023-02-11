@@ -184,9 +184,9 @@ class SearchUserAdapter : RecyclerView.Adapter<SearchUserAdapter.ViewHolder>() {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val datum = dataset[position]
         // CHANGE COLOR.
-        holder.contactCard.setCardBackgroundColor(Color.WHITE)
-        holder.name.setTextColor(Color.BLACK)
-        holder.phone.setTextColor(Color.BLACK)
+        //holder.contactCard.setCardBackgroundColor(Color.WHITE)
+        //holder.name.setTextColor(Color.BLACK)
+        //holder.phone.setTextColor(Color.BLACK)
 
         // SET DATA.
         holder.name.text = datum.name

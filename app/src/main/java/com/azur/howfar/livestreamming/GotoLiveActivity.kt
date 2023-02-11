@@ -35,21 +35,18 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
     private val binding by lazy { ActivityGotoLiveBinding.inflate(layoutInflater) }
     var front = 1
     var back = 2
-    var camara = front
+    var camara = CameraSelector.DEFAULT_BACK_CAMERA
     var isPrivate = false
-
+    private lateinit var cameraProvider: ProcessCameraProvider
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
     private val myAuth = FirebaseAuth.getInstance().currentUser!!.uid
     private var timeRef = FirebaseDatabase.getInstance().reference
     val progressFragment = ProgressFragment()
 
-    init {
-        timeRef = FirebaseDatabase.getInstance().reference.child("time").child(FirebaseAuth.getInstance().currentUser!!.uid)
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        timeRef = FirebaseDatabase.getInstance().reference.child("time").child(FirebaseAuth.getInstance().currentUser!!.uid)
         setContentView(binding.root)
         if (allPermissionsGranted()) {
             startCamera()
@@ -76,7 +73,7 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
             // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+            cameraProvider = cameraProviderFuture.get()
             val preview = Preview.Builder().build().also { it.setSurfaceProvider(binding.viewFinder.surfaceProvider) }
             imageCapture = ImageCapture.Builder().build()
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
@@ -154,8 +151,13 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
                             alertDialog.setPositiveButton("Ok") { dialog, _ -> dialog.dismiss() }
                             alertDialog.create().show()
                         } else goLive(listOfFollowers)
-                    }.addOnFailureListener { failed() }
-                }.addOnFailureListener { failed() }
+                    }.addOnFailureListener {
+                        failed()
+                    }
+                }.addOnFailureListener {
+                    Toast.makeText(this, "You don't have followers", Toast.LENGTH_LONG).show()
+                    failed()
+                }
             }
             false -> goLive()
         }
@@ -163,7 +165,7 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun failed() {
         supportFragmentManager.beginTransaction().remove(progressFragment).commit()
-        Snackbar.make(binding.root, "Failed to go live. Try again", Snackbar.LENGTH_LONG).show()
+        Toast.makeText(this, "Failed to go live. Try again", Toast.LENGTH_LONG).show()
     }
 
     override fun onDestroy() {
@@ -177,7 +179,6 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
         const val USER_DETAILS = "user_details"
         const val FOLLOWERS = "followers"
         const val FOLLOWING = "following"
-        const val PERMISSION_REQ_ID = 22
         val REQUESTED_PERMISSIONS = arrayOf(
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA
@@ -188,10 +189,17 @@ class GotoLiveActivity : AppCompatActivity(), View.OnClickListener {
         when (v?.id) {
             R.id.btnLive -> getFollowers()
             R.id.btnSwitchCamara -> {
-                if (camara == front) {
-                    camara = back
+                camara = if (camara == CameraSelector.DEFAULT_BACK_CAMERA) {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
                 } else {
-                    camara = front
+                    CameraSelector.DEFAULT_BACK_CAMERA
+                }
+                val preview = Preview.Builder().build().also { it.setSurfaceProvider(binding.viewFinder.surfaceProvider) }
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(this, camara, preview, imageCapture)
+                } catch (exc: Exception) {
+                    Log.e(CameraActivity.TAG, "Use case binding failed", exc)
                 }
             }
             R.id.btnClose -> onBackPressed()
